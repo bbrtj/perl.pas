@@ -21,7 +21,7 @@ type
 	EPerl = class(Exception);
 	EPerlCallFailed = class(EPerl);
 
-	TPerlContext = class
+	TPerlHandle = class
 	strict private
 		FPerl: TPerlInterpreter;
 	public
@@ -71,7 +71,7 @@ implementation
 
 {$link perlwrapper}
 
-constructor TPerlContext.Create();
+constructor TPerlHandle.Create();
 var
 	Argv: Array[0..3] of PChar;
 begin
@@ -91,28 +91,28 @@ begin
 		raise EPerl.Create('Failed to run Perl interpreter');
 end;
 
-destructor TPerlContext.Destroy();
+destructor TPerlHandle.Destroy();
 begin
 	perl_destruct(FPerl);
 	perl_free(FPerl);
 end;
 
-function TPerlContext.ScalarDefined(Value: TPerlSV): Boolean;
+function TPerlHandle.ScalarDefined(Value: TPerlSV): Boolean;
 begin
 	result := do_SvOK(Value) <> 0;
 end;
 
-function TPerlContext.ScalarTrue(Value: TPerlSV): Boolean;
+function TPerlHandle.ScalarTrue(Value: TPerlSV): Boolean;
 begin
 	result := do_SvTRUE(Value) <> 0;
 end;
 
-function TPerlContext.ScalarToFloat(Value: TPerlSV): Double;
+function TPerlHandle.ScalarToFloat(Value: TPerlSV): Double;
 begin
 	result := do_SvNV(Value);
 end;
 
-function TPerlContext.ScalarToString(Value: TPerlSV): String;
+function TPerlHandle.ScalarToString(Value: TPerlSV): String;
 var
 	LLen: TPerlStrLen;
 begin
@@ -120,35 +120,35 @@ begin
 	// TODO: result should have LLen
 end;
 
-function TPerlContext.ScalarToInt(Value: TPerlSV): Int64;
+function TPerlHandle.ScalarToInt(Value: TPerlSV): Int64;
 begin
 	result := do_SvIV(Value);
 end;
 
-function TPerlContext.FloatToScalar(Value: Double): TPerlSV;
+function TPerlHandle.FloatToScalar(Value: Double): TPerlSV;
 begin
 	result := Perl_newSVnv(Value);
 	// TODO: store the scalar to destroy it later
 end;
 
-function TPerlContext.IntToScalar(Value: Int64): TPerlSV;
+function TPerlHandle.IntToScalar(Value: Int64): TPerlSV;
 begin
 	result := Perl_newSViv(Value);
 	// TODO: store the scalar to destroy it later
 end;
 
-function TPerlContext.StringToScalar(const Value: String): TPerlSV;
+function TPerlHandle.StringToScalar(const Value: String): TPerlSV;
 begin
 	result := Perl_newSVpv(PChar(Value), 0);
 	// TODO: store the scalar to destroy it later
 end;
 
-function TPerlContext.RunCode(const Code: String): TPerlSV;
+function TPerlHandle.RunCode(const Code: String): TPerlSV;
 begin
 	result := Perl_eval_pv(TPerlPV(Code), 0);
 end;
 
-function TPerlContext.CallSub(const Name: String; const Args: Array of TPerlSV): TPerlSV;
+function TPerlHandle.CallSub(const Name: String; const Args: Array of TPerlSV): TPerlSV;
 begin
 	result := self.EvalSub(Name, Args);
 	if not self.EvalSuccess then
@@ -160,17 +160,17 @@ begin
 		);
 end;
 
-function TPerlContext.EvalSub(const Name: String; const Args: Array of TPerlSV): TPerlSV;
+function TPerlHandle.EvalSub(const Name: String; const Args: Array of TPerlSV): TPerlSV;
 begin
 	result := call_perl_sub(PChar(Name), @Args, length(Args));
 end;
 
-function TPerlContext.EvalError(): TPerlSV;
+function TPerlHandle.EvalError(): TPerlSV;
 begin
 	result := do_ERRSV;
 end;
 
-function TPerlContext.EvalSuccess(): Boolean;
+function TPerlHandle.EvalSuccess(): Boolean;
 begin
 	result := not self.ScalarTrue(self.EvalError);
 end;

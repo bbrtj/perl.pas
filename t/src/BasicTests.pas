@@ -30,10 +30,10 @@ end;
 
 procedure TBasicSuite.EvalTest();
 var
-	Perl: TPerlContext;
+	Perl: TPerlHandle;
 	EvalResult: TPerlSV;
 begin
-	Perl := TPerlContext.Create;
+	Perl := TPerlHandle.Create;
 
 	try
 		TestIs(Perl.EvalSuccess, true, 'no eval error with clean interpreter ok');
@@ -58,10 +58,10 @@ procedure TBasicSuite.CallTest();
 const
 	CSmallPrecision = 1E-8;
 var
-	Perl: TPerlContext;
+	Perl: TPerlHandle;
 	SubResult: TPerlSV;
 begin
-	Perl := TPerlContext.Create;
+	Perl := TPerlHandle.Create;
 
 	try
 		Perl.RunCode('sub test_int { return shift() + 1 }');
@@ -82,10 +82,10 @@ end;
 
 procedure TBasicSuite.CallErrorTest();
 var
-	Perl: TPerlContext;
+	Perl: TPerlHandle;
 	SubResult: TPerlSV;
 begin
-	Perl := TPerlContext.Create;
+	Perl := TPerlHandle.Create;
 
 	try
 		Perl.RunCode('sub test_exception { die "ex\n" }');

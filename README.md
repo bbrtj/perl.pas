@@ -6,7 +6,7 @@ because Pascal has no access to Perl C macros, which do a lot of heavy lifting.
 
 ## Description
 
-`src/perlembed.pas` is a Pascal unit which contains `TPerlContext` - a class
+`src/perlembed.pas` is a Pascal unit which contains `TPerlHandle` - a class
 holding the pointer to a Perl interpreter. Constructing this class results in
 allocating and initializing a Perl interpreter. The base class offers only a
 very bare interface to the interpreter - you are expected to subclass it and
