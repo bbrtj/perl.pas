@@ -38,11 +38,11 @@ procedure TBasicSuite.AllocationTest();
 var
 	Perl1, Perl2: TPerlHandle;
 begin
-	Perl1 := TPerlHandle.Create;
+	Perl1 := TPerlHandle.Create(true);
 	TestPass('Perl interpreter created ok');
 
 	try
-		Perl2 := TPerlHandle.Create;
+		Perl2 := TPerlHandle.Create(true);
 		TestFail('Second perl interpreter created even though this is an error');
 		Perl2.Free;
 	except
@@ -51,7 +51,7 @@ begin
 	end;
 
 	Perl1.Free;
-	Perl2 := TPerlHandle.Create;
+	Perl2 := TPerlHandle.Create(true);
 	TestPass('Second perl interpreter created after first one is freed ok');
 	Perl2.Free;
 end;
@@ -61,7 +61,7 @@ var
 	Perl: TPerlHandle;
 	EvalResult: TPerlSV;
 begin
-	Perl := TPerlHandle.Create;
+	Perl := TPerlHandle.Create(true);
 
 	try
 		TestIs(Perl.EvalSuccess, true, 'no eval error with clean interpreter ok');
@@ -87,7 +87,7 @@ var
 	Perl: TPerlHandle;
 	SubResult: TPerlSV;
 begin
-	Perl := TPerlHandle.Create;
+	Perl := TPerlHandle.Create(true);
 
 	try
 		Perl.RunCode('sub test_int { return shift() + 1 }');
@@ -111,7 +111,7 @@ var
 	Perl: TPerlHandle;
 	SubResult: TPerlSV;
 begin
-	Perl := TPerlHandle.Create;
+	Perl := TPerlHandle.Create(true);
 
 	try
 		Perl.RunCode('sub test_exception { die "ex\n" }');
@@ -138,7 +138,7 @@ var
 	Perl: TPerlHandle;
 	I: Integer;
 begin
-	Perl := TPerlHandle.Create;
+	Perl := TPerlHandle.Create(true);
 
 	try
 		try
@@ -171,7 +171,7 @@ var
 	Perl: TPerlHandle;
 	Value1, Value2, Value3: TPerlSv;
 begin
-	Perl := TPerlHandle.Create;
+	Perl := TPerlHandle.Create(true);
 
 	try
 		Value1 := Perl.IntToScalar(42);

@@ -42,7 +42,7 @@ type
 		procedure AdoptScalar(Value: TPerlSV);
 		procedure DisownScalars(Mark: Integer = 0);
 	public
-		constructor Create(); virtual;
+		constructor Create(Cleanup: Boolean = false); virtual;
 		destructor Destroy; override;
 	public
 		function ScalarDefined(Value: TPerlSV): Boolean;
@@ -79,7 +79,7 @@ function Perl_newSVpv(Pv: TPerlPV; Len: TPerlStrLen): TPerlSV; cdecl; external '
 
 { Our wrapper functions }
 procedure xs_init(Interp: TPerlInterpreter); cdecl; external;
-procedure setup_flags(); cdecl; external;
+procedure setup_flags(DestructLevel: cint); cdecl; external;
 function call_perl_sub(SubName: PChar; Args: PPerlSV; ArgCount: cint): TPerlSV; cdecl; external;
 procedure do_PERL_SYS_INIT3(Argc: cint; Argv: PPChar; Env: PPChar); cdecl; external;
 procedure do_PERL_SYS_TERM(); cdecl; external;
@@ -118,7 +118,7 @@ begin
 	end;
 end;
 
-constructor TPerlHandle.Create();
+constructor TPerlHandle.Create(Cleanup: Boolean = false);
 var
 	I: Integer;
 	Argv: Array[0..3] of PChar;
@@ -134,7 +134,7 @@ begin
 
 	FPerl := perl_alloc;
 	perl_construct(FPerl);
-	setup_flags();
+	setup_flags(IfThen(Cleanup, 1, 0));
 
 	Argv[0] := '';
 	Argv[1] := '-e';

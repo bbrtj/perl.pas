@@ -23,13 +23,14 @@ PERL_LDFLAGS_FPC := $(addprefix -k,$(filter -l% -L% -E --export-dynamic,$(PERL_L
 build/perlwrapper.o: src/perlwrapper.c prepare
 	$(CC) -O2 -c -fPIC $(PERL_CFLAGS) src/perlwrapper.c -o build/perlwrapper.o
 
-tests: t/tests.t.pas src/perlembed.pas build/perlwrapper.o prepare
+tests: t/tests.t.pas t/leaks.t.pas src/perlembed.pas build/perlwrapper.o prepare
 	$(FPC) $(FPC_FLAGS) -g -Fut/src -Fupascal-tap/src $(PERL_LDFLAGS_FPC) t/tests.t.pas -ot/tests.t
+	$(FPC) $(FPC_FLAGS) -g -Fut/src -Fupascal-tap/src $(PERL_LDFLAGS_FPC) t/leaks.t.pas -ot/leaks.t
 	cp -n $(PERL_LIBDIR)/libperl.so t/
 
 prepare:
 	mkdir -p build
 
 clean:
-	rm -Rf build t/tests.t t/libperl.so
+	rm -Rf build t/tests.t t/leaks.t t/libperl.so
 

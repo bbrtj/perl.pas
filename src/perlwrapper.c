@@ -5,10 +5,10 @@ void xs_init(PerlInterpreter *my_perl)
 {
 }
 
-void setup_flags()
+void setup_flags(int destruct_level)
 {
 	PL_exit_flags |= PERL_EXIT_DESTRUCT_END;
-	PL_perl_destruct_level = 1;
+	PL_perl_destruct_level = destruct_level;
 }
 
 /* Simple wrapper to call a Perl subroutine with arguments */
