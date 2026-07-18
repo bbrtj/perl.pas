@@ -55,3 +55,18 @@ long do_SvIV(SV *sv)
     return SvIV(sv);
 }
 
+int do_SvOK(SV *sv)
+{
+	return SvOK(sv);
+}
+
+int do_SvTRUE(SV *sv)
+{
+	return SvTRUE(sv);
+}
+
+SV* do_ERRSV()
+{
+	return ERRSV;
+}
+

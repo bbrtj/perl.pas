@@ -19,6 +19,7 @@ type
 	PPerlStrLen = ^TPerlStrLen;
 
 	EPerl = class(Exception);
+	EPerlCallFailed = class(EPerl);
 
 	TPerlContext = class
 	strict private
@@ -27,6 +28,8 @@ type
 		constructor Create(); virtual;
 		destructor Destroy; override;
 	public
+		function ScalarDefined(Value: TPerlSV): Boolean;
+		function ScalarTrue(Value: TPerlSV): Boolean;
 		function ScalarToFloat(Value: TPerlSV): Double;
 		function ScalarToString(Value: TPerlSV): String;
 		function ScalarToInt(Value: TPerlSV): Int64;
@@ -36,6 +39,9 @@ type
 	public
 		function RunCode(const Code: String): TPerlSV;
 		function CallSub(const Name: String; const Args: Array of TPerlSV): TPerlSV;
+		function EvalSub(const Name: String; const Args: Array of TPerlSV): TPerlSV;
+		function EvalError(): TPerlSV;
+		function EvalSuccess(): Boolean;
 	end;
 
 { Perl C API functions }
@@ -57,6 +63,9 @@ function call_perl_sub(sub_name: PChar; args: PPerlSV; arg_count: cint): TPerlSV
 function do_SvPV(Sv: TPerlSV; Len: PPerlStrLen): TPerlPV; cdecl; external;
 function do_SvNV(Sv: TPerlSV): TPerlNV; cdecl; external;
 function do_SvIV(Sv: TPerlSV): TPerlIV; cdecl; external;
+function do_SvOK(Sv: TPerlSV): cint; cdecl; external;
+function do_SvTRUE(Sv: TPerlSV): cint; cdecl; external;
+function do_ERRSV(): TPerlSV; cdecl; external;
 
 implementation
 
@@ -86,6 +95,16 @@ destructor TPerlContext.Destroy();
 begin
 	perl_destruct(FPerl);
 	perl_free(FPerl);
+end;
+
+function TPerlContext.ScalarDefined(Value: TPerlSV): Boolean;
+begin
+	result := do_SvOK(Value) <> 0;
+end;
+
+function TPerlContext.ScalarTrue(Value: TPerlSV): Boolean;
+begin
+	result := do_SvTRUE(Value) <> 0;
 end;
 
 function TPerlContext.ScalarToFloat(Value: TPerlSV): Double;
@@ -126,12 +145,34 @@ end;
 
 function TPerlContext.RunCode(const Code: String): TPerlSV;
 begin
-	result := Perl_eval_pv(TPerlPV(Code), 1);
+	result := Perl_eval_pv(TPerlPV(Code), 0);
 end;
 
 function TPerlContext.CallSub(const Name: String; const Args: Array of TPerlSV): TPerlSV;
 begin
+	result := self.EvalSub(Name, Args);
+	if not self.EvalSuccess then
+		raise EPerlCallFailed.Create(
+			Format(
+				'calling %s failed: %s',
+				[Name, self.ScalarToString(self.EvalError)]
+			)
+		);
+end;
+
+function TPerlContext.EvalSub(const Name: String; const Args: Array of TPerlSV): TPerlSV;
+begin
 	result := call_perl_sub(PChar(Name), @Args, length(Args));
+end;
+
+function TPerlContext.EvalError(): TPerlSV;
+begin
+	result := do_ERRSV;
+end;
+
+function TPerlContext.EvalSuccess(): Boolean;
+begin
+	result := not self.ScalarTrue(self.EvalError);
 end;
 
 end.
