@@ -31,5 +31,5 @@ prepare:
 	mkdir -p build
 
 clean:
-	rm -Rf build t/tests.t
+	rm -Rf build t/tests.t t/libperl.so
 
