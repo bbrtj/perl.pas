@@ -31,5 +31,5 @@ prepare:
 	mkdir -p build
 
 clean:
-	rm -Rf build
+	rm -Rf build t/tests.t
 
