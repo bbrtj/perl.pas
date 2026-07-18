@@ -5,16 +5,20 @@ unit PerlEmbed;
 interface
 
 uses
-	ctypes, SysUtils;
+	Ctypes, SysUtils, Math;
 
 type
 	TPerlInterpreter = Pointer;
+
 	PPChar = ^PChar;
+
 	TPerlSV = Pointer;
+	PPerlSV = ^TPerlSV;
+
 	TPerlIV = clong;
 	TPerlNV = cdouble;
 	TPerlPV = PChar;
-	PPerlSV = ^TPerlSV;
+
 	TPerlStrLen = csize_t;
 	PPerlStrLen = ^TPerlStrLen;
 
@@ -22,10 +26,16 @@ type
 	EPerlCallFailed = class(EPerl);
 
 	TPerlHandle = class
-	strict private class var
+	private class var
 		FInterpreterCount: Integer;
 	strict private var
 		FPerl: TPerlInterpreter;
+		FPerlVars: Array of TPerlSV;
+		FPerlVarsCapacity: Integer;
+		FPerlVarsLastIndex: Integer;
+	strict private
+		procedure AdoptScalar(Value: TPerlSV);
+		procedure DisownScalars(FromIndex: Integer = 0);
 	public
 		constructor Create(); virtual;
 		destructor Destroy; override;
@@ -48,40 +58,71 @@ type
 
 { Perl C API functions }
 function perl_alloc(): TPerlInterpreter; cdecl; external 'perl';
-procedure perl_construct(interp: TPerlInterpreter); cdecl; external 'perl';
-function perl_parse(interp: TPerlInterpreter;
-	xsinit: Pointer; argc: cint; argv: PPChar; env: PPChar): cint; cdecl; external 'perl';
-function perl_run(interp: TPerlInterpreter): cint; cdecl; external 'perl';
-procedure perl_destruct(interp: TPerlInterpreter); cdecl; external 'perl';
-procedure perl_free(interp: TPerlInterpreter); cdecl; external 'perl';
-function Perl_eval_pv(code: PChar; croak_on_error: cint): TPerlSV; cdecl; external 'perl';
+procedure perl_construct(Interp: TPerlInterpreter); cdecl; external 'perl';
+function perl_parse(Interp: TPerlInterpreter;
+	XsInit: Pointer; Argc: cint; Argv: PPChar; Env: PPChar): cint; cdecl; external 'perl';
+function perl_run(Interp: TPerlInterpreter): cint; cdecl; external 'perl';
+procedure perl_destruct(Interp: TPerlInterpreter); cdecl; external 'perl';
+procedure perl_free(Interp: TPerlInterpreter); cdecl; external 'perl';
+function Perl_eval_pv(Code: PChar; CroakOnError: cint): TPerlSV; cdecl; external 'perl';
 function Perl_newSVnv(Nv: TPerlNV): TPerlSV; cdecl; external 'perl';
 function Perl_newSViv(Iv: TPerlIV): TPerlSV; cdecl; external 'perl';
 function Perl_newSVpv(Pv: TPerlPV; Len: TPerlStrLen): TPerlSV; cdecl; external 'perl';
 
 { Our wrapper functions }
-procedure xs_init(interp: TPerlInterpreter); cdecl; external;
-function call_perl_sub(sub_name: PChar; args: PPerlSV; arg_count: cint): TPerlSV; cdecl; external;
+procedure xs_init(Interp: TPerlInterpreter); cdecl; external;
+procedure setup_flags(); cdecl; external;
+function call_perl_sub(SubName: PChar; Args: PPerlSV; ArgCount: cint): TPerlSV; cdecl; external;
+procedure do_PERL_SYS_INIT3(Argc: cint; Argv: PPChar; Env: PPChar); cdecl; external;
+procedure do_PERL_SYS_TERM(); cdecl; external;
 function do_SvPV(Sv: TPerlSV; Len: PPerlStrLen): TPerlPV; cdecl; external;
 function do_SvNV(Sv: TPerlSV): TPerlNV; cdecl; external;
 function do_SvIV(Sv: TPerlSV): TPerlIV; cdecl; external;
 function do_SvOK(Sv: TPerlSV): cint; cdecl; external;
 function do_SvTRUE(Sv: TPerlSV): cint; cdecl; external;
 function do_ERRSV(): TPerlSV; cdecl; external;
+procedure do_SVREFCNT_dec(Sv: TPerlSV); cdecl; external;
 
 implementation
 
 {$link perlwrapper}
 
+procedure TPerlHandle.AdoptScalar(Value: TPerlSV);
+const
+	CStartCapacity = 10;
+	CCapacityGrowthRate = 1.5;
+begin
+	Inc(FPerlVarsLastIndex);
+	if FPerlVarsLastIndex >= FPerlVarsCapacity then	begin
+		FPerlVarsCapacity := Max(CStartCapacity, Floor(FPerlVarsCapacity * CCapacityGrowthRate));
+		SetLength(FPerlVars, FPerlVarsCapacity);
+	end;
+
+	{ NOTE: scalar should already have an increased refcount }
+	FPerlVars[FPerlVarsLastIndex] := Value;
+end;
+
+procedure TPerlHandle.DisownScalars(FromIndex: Integer = 0);
+begin
+	while FPerlVarsLastIndex >= FromIndex do begin
+		do_SVREFCNT_dec(FPerlVars[FPerlVarsLastIndex]);
+		Dec(FPerlVarsLastIndex);
+	end;
+end;
+
 constructor TPerlHandle.Create();
 var
 	Argv: Array[0..3] of PChar;
 begin
+	{ NOTE: need to be done early for the destructor to work properly }
+	FPerlVarsLastIndex := -1;
+
 	if FInterpreterCount > 0 then
 		raise EPerl.Create('Only one perl interpreter can be allocated at once');
 
 	FPerl := perl_alloc;
 	perl_construct(FPerl);
+	setup_flags();
 
 	Argv[0] := '';
 	Argv[1] := '-e';
@@ -95,16 +136,18 @@ begin
 	if perl_run(FPerl) <> 0 then
 		raise EPerl.Create('Failed to run Perl interpreter');
 
-	FInterpreterCount += 1;
+	Inc(FInterpreterCount);
 end;
 
 destructor TPerlHandle.Destroy();
 begin
+	self.DisownScalars;
+
 	if FPerl <> nil then begin
 		perl_destruct(FPerl);
 		perl_free(FPerl);
 
-		FInterpreterCount -= 1;
+		Dec(FInterpreterCount);
 	end;
 end;
 
@@ -139,19 +182,19 @@ end;
 function TPerlHandle.FloatToScalar(Value: Double): TPerlSV;
 begin
 	result := Perl_newSVnv(Value);
-	// TODO: store the scalar to destroy it later
+	self.AdoptScalar(result);
 end;
 
 function TPerlHandle.IntToScalar(Value: Int64): TPerlSV;
 begin
 	result := Perl_newSViv(Value);
-	// TODO: store the scalar to destroy it later
+	self.AdoptScalar(result);
 end;
 
 function TPerlHandle.StringToScalar(const Value: String): TPerlSV;
 begin
 	result := Perl_newSVpv(PChar(Value), 0);
-	// TODO: store the scalar to destroy it later
+	self.AdoptScalar(result);
 end;
 
 function TPerlHandle.RunCode(const Code: String): TPerlSV;
@@ -174,6 +217,7 @@ end;
 function TPerlHandle.EvalSub(const Name: String; const Args: Array of TPerlSV): TPerlSV;
 begin
 	result := call_perl_sub(PChar(Name), @Args, length(Args));
+	self.AdoptScalar(result);
 end;
 
 function TPerlHandle.EvalError(): TPerlSV;
@@ -186,5 +230,24 @@ begin
 	result := not self.ScalarTrue(self.EvalError);
 end;
 
+var
+	I: Integer;
+	Argv: Array of PChar;
+	Env: Array of PChar;
+initialization
+	TPerlHandle.FInterpreterCount := 0;
+
+	SetLength(Argv, ParamCount);
+	for I := 0 to High(Argv) do
+		Argv[I] := PChar(ParamStr(I));
+
+	SetLength(Env, GetEnvironmentVariableCount);
+	for I := 0 to High(Env) do
+		Env[I] := PChar(GetEnvironmentString(I));
+
+	do_PERL_SYS_INIT3(ParamCount, @Argv, @Env);
+
+finalization
+	do_PERL_SYS_TERM;
 end.
 
