@@ -150,7 +150,7 @@ begin
 		end;
 
 		try
-			for I := 0 to 30 do
+			for I := 0 to CMaxPerlContextDepth do
 				Perl.EnterContext;
 
 			TestFail('deep context enter did not raise an exception');

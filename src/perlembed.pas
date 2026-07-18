@@ -7,6 +7,9 @@ interface
 uses
 	Ctypes, SysUtils, Math;
 
+const
+	CMaxPerlContextDepth = 20;
+
 type
 	TPerlInterpreter = Pointer;
 
@@ -34,7 +37,7 @@ type
 		FPerlVars: Array of TPerlSV;
 		FPerlVarsCapacity: Integer;
 		FPerlVarsLastIndex: Integer;
-		FPerlVarsMarks: Array[0 .. 9] of Integer;
+		FPerlVarsMarks: Array[0 .. CMaxPerlContextDepth - 1] of Integer;
 	strict private
 		procedure AdoptScalar(Value: TPerlSV);
 		procedure DisownScalars(Mark: Integer = 0);
