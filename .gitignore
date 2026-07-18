@@ -1,6 +1,4 @@
-/*.o
-/*.so
-/*.ppu
-/*.res
-/emb
+/build
+*.so
+/t/tests.t
 

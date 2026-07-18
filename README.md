@@ -4,17 +4,39 @@ This is a set of tools which makes it easier to embed Perl interpreter inside a
 Pascal program. This is significantly more difficult than embeding in C,
 because Pascal has no access to Perl C macros, which do a lot of heavy lifting.
 
-`perlembed.pas` is a Pascal unit which contains `TPerlContext` - a class
+## Description
+
+`src/perlembed.pas` is a Pascal unit which contains `TPerlContext` - a class
 holding the pointer to a Perl interpreter. Constructing this class results in
 allocating and initializing a Perl interpreter. The base class offers only a
 very bare interface to the interpreter - you are expected to subclass it and
 make some higher level functions to call whatever perl code you need.
 
-At the moment, following restrictions are in place:
+## Building
 
-- only one class of the interpreter can be instantiated at a time (regardless
-  of interpreter's multiplicity)
-- can only be linked to non-threaded perls
+This repo can only build automated tests, with `make tests`. Then, `prove` can
+be run to ensure everything is working correctly.
+
+To use it in a project, you need the contents of `src` and use unit `PerlEmbed`
+in your Pascal code. Building process can be copied from `makefile`.
+
+## TODO
+
+Currently leaks memory and has unhandled edge cases.
+
+Only unthreaded perls are supported right now. No support for multiplicity -
+only one interpreter can be instantiated at a time (but Pascal code does not
+keep track of that).
+
+Perl functions can only be called in scalar context.
+
+There is no way to call Pascal back from Perl - an XS layer for that needs to
+be created, with XS code generation.
+
+Eventually, a shared library for wrapping perl embedding should be developed,
+which will only require you to add `PerlEmbed` into the project and link
+correctly with `libperlpas` and `libperl`, without the need to build
+`perlwrapper.c` with C compiler.
 
 ## Author
 

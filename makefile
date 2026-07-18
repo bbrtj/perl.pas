@@ -1,7 +1,11 @@
-PERL_EXECUTABLE := perl
-PERL_CFLAGS := $(shell $(PERL_EXECUTABLE) -MExtUtils::Embed -e ccopts)
-PERL_LDFLAGS := $(shell $(PERL_EXECUTABLE) -MExtUtils::Embed -e ldopts)
-PERL_LIBDIR := $(shell $(PERL_EXECUTABLE) -MConfig -e 'print $$Config{archlibexp}')/CORE
+PERL ?= perl
+FPC ?= fpc
+CC ?= gcc
+
+FPC_FLAGS ?= -FEbuild -FUbuild -Flbuild -Fusrc
+PERL_CFLAGS := $(shell $(PERL) -MExtUtils::Embed -e ccopts)
+PERL_LDFLAGS := $(shell $(PERL) -MExtUtils::Embed -e ldopts)
+PERL_LIBDIR := $(shell $(PERL) -MConfig -e 'print $$Config{archlibexp}')/CORE
 
 # fpc's -k passes flags straight to the system linker (ld), not through
 # gcc. ExtUtils::Embed's ldopts is written for gcc, though: it contains
@@ -16,15 +20,16 @@ PERL_LIBDIR := $(shell $(PERL_EXECUTABLE) -MConfig -e 'print $$Config{archlibexp
 PERL_LDFLAGS_CLEAN := $(shell echo '$(PERL_LDFLAGS)' | sed -e 's/-Wl,/ /g' -e 's/,/ /g')
 PERL_LDFLAGS_FPC := $(addprefix -k,$(filter -l% -L% -E --export-dynamic,$(PERL_LDFLAGS_CLEAN)))
 
-all: emb
+build/perlwrapper.o: src/perlwrapper.c prepare
+	$(CC) -O2 -c -fPIC $(PERL_CFLAGS) src/perlwrapper.c -o build/perlwrapper.o
 
-perlwrapper.o: perlwrapper.c
-	gcc -O2 -c -fPIC $(PERL_CFLAGS) perlwrapper.c -o perlwrapper.o
+tests: t/tests.t.pas src/perlembed.pas build/perlwrapper.o prepare
+	$(FPC) $(FPC_FLAGS) -Fut/src -Fupascal-tap/src $(PERL_LDFLAGS_FPC) t/tests.t.pas -ot/tests.t
+	cp -n $(PERL_LIBDIR)/libperl.so t/
 
-emb: emb.pas perlembed.pas perlwrapper.o
-	fpc $(PERL_LDFLAGS_FPC) emb.pas
-	cp -n $(PERL_LIBDIR)/libperl.so ./
+prepare:
+	mkdir -p build
 
 clean:
-	rm -f perlwrapper.o emb *.o *.ppu *.res
+	rm -Rf build
 

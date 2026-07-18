@@ -34,10 +34,8 @@ type
 		function IntToScalar(Value: Int64): TPerlSV;
 		function StringToScalar(const Value: String): TPerlSV;
 	public
-		procedure RunCode(const Code: String);
-		function CallMethod(const Name: String; const Args: Array of TPerlSV): TPerlSV;
-	public
-		property Perl: TPerlInterpreter read FPerl;
+		function RunCode(const Code: String): TPerlSV;
+		function CallSub(const Name: String; const Args: Array of TPerlSV): TPerlSV;
 	end;
 
 { Perl C API functions }
@@ -126,12 +124,12 @@ begin
 	// TODO: store the scalar to destroy it later
 end;
 
-procedure TPerlContext.RunCode(const Code: String);
+function TPerlContext.RunCode(const Code: String): TPerlSV;
 begin
-	Perl_eval_pv(TPerlPV(Code), 1);
+	result := Perl_eval_pv(TPerlPV(Code), 1);
 end;
 
-function TPerlContext.CallMethod(const Name: String; const Args: Array of TPerlSV): TPerlSV;
+function TPerlContext.CallSub(const Name: String; const Args: Array of TPerlSV): TPerlSV;
 begin
 	result := call_perl_sub(PChar(Name), @Args, length(Args));
 end;
