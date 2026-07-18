@@ -13,6 +13,7 @@ type
 	TBasicSuite = class(TTAPSuite, ITAPSuiteEssential)
 		constructor Create(); override;
 
+		procedure AllocationTest();
 		procedure EvalTest();
 		procedure CallErrorTest();
 		procedure CallTest();
@@ -23,9 +24,32 @@ implementation
 constructor TBasicSuite.Create();
 begin
 	inherited;
+	Scenario(@self.AllocationTest, 'Perl interpreter creation tests');
 	Scenario(@self.EvalTest, 'Perl code evaluation tests');
 	Scenario(@self.CallErrorTest, 'Calling Perl sub with exception tests');
 	Scenario(@self.CallTest, 'Calling Perl sub from Pascal tests');
+end;
+
+procedure TBasicSuite.AllocationTest();
+var
+	Perl1, Perl2: TPerlHandle;
+begin
+	Perl1 := TPerlHandle.Create;
+	TestPass('Perl interpreter created ok');
+
+	try
+		Perl2 := TPerlHandle.Create;
+		TestFail('Second perl interpreter created even though this is an error');
+		Perl2.Free;
+	except
+		on E: EPerl do
+			TestIs(E.Message, 'Only one perl interpreter can be allocated at once', 'second interpreter error ok');
+	end;
+
+	Perl1.Free;
+	Perl2 := TPerlHandle.Create;
+	TestPass('Second perl interpreter created after first one is freed ok');
+	Perl2.Free;
 end;
 
 procedure TBasicSuite.EvalTest();

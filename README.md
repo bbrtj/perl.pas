@@ -25,8 +25,7 @@ in your Pascal code. Building process can be copied from `makefile`.
 Currently leaks memory and has unhandled edge cases.
 
 Only unthreaded perls are supported right now. No support for multiplicity -
-only one interpreter can be instantiated at a time (but Pascal code does not
-keep track of that).
+only one interpreter can be instantiated at a time.
 
 Perl functions can only be called in scalar context.
 

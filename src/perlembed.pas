@@ -22,7 +22,9 @@ type
 	EPerlCallFailed = class(EPerl);
 
 	TPerlHandle = class
-	strict private
+	strict private class var
+		FInterpreterCount: Integer;
+	strict private var
 		FPerl: TPerlInterpreter;
 	public
 		constructor Create(); virtual;
@@ -75,6 +77,9 @@ constructor TPerlHandle.Create();
 var
 	Argv: Array[0..3] of PChar;
 begin
+	if FInterpreterCount > 0 then
+		raise EPerl.Create('Only one perl interpreter can be allocated at once');
+
 	FPerl := perl_alloc;
 	perl_construct(FPerl);
 
@@ -89,12 +94,18 @@ begin
 
 	if perl_run(FPerl) <> 0 then
 		raise EPerl.Create('Failed to run Perl interpreter');
+
+	FInterpreterCount += 1;
 end;
 
 destructor TPerlHandle.Destroy();
 begin
-	perl_destruct(FPerl);
-	perl_free(FPerl);
+	if FPerl <> nil then begin
+		perl_destruct(FPerl);
+		perl_free(FPerl);
+
+		FInterpreterCount -= 1;
+	end;
 end;
 
 function TPerlHandle.ScalarDefined(Value: TPerlSV): Boolean;
