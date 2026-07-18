@@ -23,6 +23,7 @@ type
 	PPerlStrLen = ^TPerlStrLen;
 
 	EPerl = class(Exception);
+	EPerlContext = class(Exception);
 	EPerlCallFailed = class(EPerl);
 
 	TPerlHandle = class
@@ -33,9 +34,10 @@ type
 		FPerlVars: Array of TPerlSV;
 		FPerlVarsCapacity: Integer;
 		FPerlVarsLastIndex: Integer;
+		FPerlVarsMarks: Array[0 .. 9] of Integer;
 	strict private
 		procedure AdoptScalar(Value: TPerlSV);
-		procedure DisownScalars(FromIndex: Integer = 0);
+		procedure DisownScalars(Mark: Integer = 0);
 	public
 		constructor Create(); virtual;
 		destructor Destroy; override;
@@ -48,6 +50,9 @@ type
 		function FloatToScalar(Value: Double): TPerlSV;
 		function IntToScalar(Value: Int64): TPerlSV;
 		function StringToScalar(const Value: String): TPerlSV;
+	public
+		procedure EnterContext();
+		procedure LeaveContext();
 	public
 		function RunCode(const Code: String): TPerlSV;
 		function CallSub(const Name: String; const Args: Array of TPerlSV): TPerlSV;
@@ -102,9 +107,9 @@ begin
 	FPerlVars[FPerlVarsLastIndex] := Value;
 end;
 
-procedure TPerlHandle.DisownScalars(FromIndex: Integer = 0);
+procedure TPerlHandle.DisownScalars(Mark: Integer = 0);
 begin
-	while FPerlVarsLastIndex >= FromIndex do begin
+	while FPerlVarsLastIndex >= Mark do begin
 		do_SVREFCNT_dec(FPerlVars[FPerlVarsLastIndex]);
 		Dec(FPerlVarsLastIndex);
 	end;
@@ -112,10 +117,14 @@ end;
 
 constructor TPerlHandle.Create();
 var
+	I: Integer;
 	Argv: Array[0..3] of PChar;
 begin
 	{ NOTE: need to be done early for the destructor to work properly }
 	FPerlVarsLastIndex := -1;
+
+	for I := low(FPerlVarsMarks) to high(FPerlVarsMarks) do
+		FPerlVarsMarks[I] := -1;
 
 	if FInterpreterCount > 0 then
 		raise EPerl.Create('Only one perl interpreter can be allocated at once');
@@ -130,7 +139,7 @@ begin
 	Argv[3] := nil;
 
 	{ Parse and initialize Perl }
-	if perl_parse(FPerl, @xs_init, High(Argv), @Argv, nil) <> 0 then
+	if perl_parse(FPerl, @xs_init, high(Argv), @Argv, nil) <> 0 then
 		raise EPerl.Create('Failed to initialize Perl interpreter');
 
 	if perl_run(FPerl) <> 0 then
@@ -197,6 +206,35 @@ begin
 	self.AdoptScalar(result);
 end;
 
+procedure TPerlHandle.EnterContext();
+var
+	I: Integer;
+begin
+	for I := low(FPerlVarsMarks) to high(FPerlVarsMarks) do begin
+		if FPerlVarsMarks[I] >= 0 then continue;
+
+		FPerlVarsMarks[I] := FPerlVarsLastIndex + 1;
+		exit;
+	end;
+
+	raise EPerlContext.Create('Perl max context pool is depleted');
+end;
+
+procedure TPerlHandle.LeaveContext();
+var
+	I: Integer;
+begin
+	for I := high(FPerlVarsMarks) downto low(FPerlVarsMarks) do begin
+		if FPerlVarsMarks[I] < 0 then continue;
+
+		self.DisownScalars(FPerlVarsMarks[I]);
+		FPerlVarsMarks[I] := -1;
+		exit;
+	end;
+
+	raise EPerlContext.Create('Attempt to leave Perl context without entering it first');
+end;
+
 function TPerlHandle.RunCode(const Code: String): TPerlSV;
 begin
 	result := Perl_eval_pv(TPerlPV(Code), 0);
@@ -230,19 +268,22 @@ begin
 	result := not self.ScalarTrue(self.EvalError);
 end;
 
+{ implementation end }
+
 var
 	I: Integer;
 	Argv: Array of PChar;
 	Env: Array of PChar;
+
 initialization
 	TPerlHandle.FInterpreterCount := 0;
 
 	SetLength(Argv, ParamCount);
-	for I := 0 to High(Argv) do
+	for I := 0 to high(Argv) do
 		Argv[I] := PChar(ParamStr(I));
 
 	SetLength(Env, GetEnvironmentVariableCount);
-	for I := 0 to High(Env) do
+	for I := 0 to high(Env) do
 		Env[I] := PChar(GetEnvironmentString(I));
 
 	do_PERL_SYS_INIT3(ParamCount, @Argv, @Env);

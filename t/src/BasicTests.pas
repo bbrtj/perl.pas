@@ -17,6 +17,8 @@ type
 		procedure EvalTest();
 		procedure CallErrorTest();
 		procedure CallTest();
+		procedure ContextUseTest();
+		procedure ContextFreeTest();
 	end;
 
 implementation
@@ -28,6 +30,8 @@ begin
 	Scenario(@self.EvalTest, 'Perl code evaluation tests');
 	Scenario(@self.CallErrorTest, 'Calling Perl sub with exception tests');
 	Scenario(@self.CallTest, 'Calling Perl sub from Pascal tests');
+	Scenario(@self.ContextUseTest, 'Perl context using tests');
+	Scenario(@self.ContextFreeTest, 'Perl scalar freeing tests');
 end;
 
 procedure TBasicSuite.AllocationTest();
@@ -71,8 +75,6 @@ begin
 		TestIs(Perl.ScalarDefined(EvalResult), false, 'exception returning undef ok');
 		TestIs(Perl.EvalSuccess, false, 'exception defined ok');
 		TestIs(Perl.ScalarToString(Perl.EvalError), 'bailing out' + sLineBreak, 'exception text ok');
-
-		// TODO: check refcounting and memory state (avoid leaks)
 	finally
 		Perl.Free;
 	end;
@@ -126,6 +128,78 @@ begin
 			on E: EPerlCallFailed do
 				TestIs(E.Message, 'calling test_exception failed: ex' + sLineBreak, 'pascal exception text ok');
 		end;
+	finally
+		Perl.Free;
+	end;
+end;
+
+procedure TBasicSuite.ContextUseTest();
+var
+	Perl: TPerlHandle;
+	I: Integer;
+begin
+	Perl := TPerlHandle.Create;
+
+	try
+		try
+			Perl.LeaveContext;
+			TestFail('bare context leave did not raise an exception');
+		except
+			on E: EPerlContext do
+				TestIs(E.Message, 'Attempt to leave Perl context without entering it first', 'exception ok');
+		end;
+
+		try
+			for I := 0 to 30 do
+				Perl.EnterContext;
+
+			TestFail('deep context enter did not raise an exception');
+		except
+			on E: EPerlContext do
+				TestIs(E.Message, 'Perl max context pool is depleted', 'exception ok');
+		end;
+
+		{ try leaving the context now - an exception will bailout the test }
+		Perl.LeaveContext;
+	finally
+		Perl.Free;
+	end;
+end;
+
+procedure TBasicSuite.ContextFreeTest();
+var
+	Perl: TPerlHandle;
+	Value1, Value2, Value3: TPerlSv;
+begin
+	Perl := TPerlHandle.Create;
+
+	try
+		Value1 := Perl.IntToScalar(42);
+		TestIs(Perl.ScalarDefined(Value1), true, 'value before context ok');
+
+		{ context 1 begin }
+		Perl.EnterContext;
+
+		Value2 := Perl.IntToScalar(42);
+		TestIs(Perl.ScalarDefined(Value2), true, 'value in context 1 ok');
+
+		{ context 2 begin }
+		Perl.EnterContext;
+
+		Value3 := Perl.IntToScalar(42);
+		TestIs(Perl.ScalarDefined(Value3), true, 'value in context 2 ok');
+
+		{ context 2 end }
+		Perl.LeaveContext;
+
+		TestIs(Perl.ScalarDefined(Value2), true, 'value in context 1 not freed ok');
+		TestIs(Perl.ScalarDefined(Value3), false, 'value in context 2 freed ok');
+
+		{ context 1 end }
+		Perl.LeaveContext;
+
+		TestIs(Perl.ScalarDefined(Value1), true, 'value before context not freed ok');
+		TestIs(Perl.ScalarDefined(Value2), false, 'value in context 1 freed ok');
 	finally
 		Perl.Free;
 	end;
