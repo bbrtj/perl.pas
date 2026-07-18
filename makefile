@@ -2,7 +2,7 @@ PERL ?= perl
 FPC ?= fpc
 CC ?= gcc
 
-FPC_FLAGS ?= -FEbuild -FUbuild -Flbuild -Fusrc
+FPC_FLAGS := -FEbuild -FUbuild -Flbuild -Fusrc
 PERL_CFLAGS := $(shell $(PERL) -MExtUtils::Embed -e ccopts)
 PERL_LDFLAGS := $(shell $(PERL) -MExtUtils::Embed -e ldopts)
 PERL_LIBDIR := $(shell $(PERL) -MConfig -e 'print $$Config{archlibexp}')/CORE
