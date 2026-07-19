@@ -25,18 +25,17 @@ in your Pascal code. Building process can be copied from `makefile`.
 Only unthreaded perls are supported right now. No support for multiplicity -
 only one interpreter can be instantiated at a time.
 
-Perl should be compiled without any @INC to avoid potential lib mismatches and
+Perl should be compiled without any `@INC` to avoid potential lib mismatches and
 make it easier to test - work out how to do that.
+
+Perl should be sandboxed as much as possible - for example, it should not be
+possible to change program's name with `$0`, or cause the termination of the
+program with `exit`.
 
 Perl functions can only be called in scalar context.
 
 There is no way to call Pascal back from Perl - an XS layer for that needs to
 be created, with XS code generation.
-
-Eventually, a shared library for wrapping perl embedding should be developed,
-which will only require you to add `PerlEmbed` into the project and link
-correctly with `libperlpas` and `libperl`, without the need to build
-`perlwrapper.c` with C compiler.
 
 ## Author
 
