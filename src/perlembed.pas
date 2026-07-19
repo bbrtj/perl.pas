@@ -51,9 +51,9 @@ type
 		function ScalarTrue(Value: TPerlSV): Boolean;
 		function ScalarToFloat(Value: TPerlSV): Double;
 		function ScalarToString(Value: TPerlSV): String;
-		function ScalarToInt(Value: TPerlSV): Int64;
+		function ScalarToInteger(Value: TPerlSV): Int64;
 		function FloatToScalar(Value: Double): TPerlSV;
-		function IntToScalar(Value: Int64): TPerlSV;
+		function IntegerToScalar(Value: Int64): TPerlSV;
 		function StringToScalar(const Value: String): TPerlSV;
 	public
 		procedure EnterContext();
@@ -196,7 +196,7 @@ begin
 	// TODO: result should have LLen
 end;
 
-function TPerlHandle.ScalarToInt(Value: TPerlSV): Int64;
+function TPerlHandle.ScalarToInteger(Value: TPerlSV): Int64;
 begin
 	result := do_SvIV(Value);
 end;
@@ -207,7 +207,7 @@ begin
 	self.AdoptScalar(result);
 end;
 
-function TPerlHandle.IntToScalar(Value: Int64): TPerlSV;
+function TPerlHandle.IntegerToScalar(Value: Int64): TPerlSV;
 begin
 	result := Perl_newSViv(Value);
 	self.AdoptScalar(result);

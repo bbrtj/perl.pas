@@ -69,7 +69,7 @@ begin
 			Diag('eval error with clean interpreter: ' + Perl.ScalarToString(Perl.EvalError));
 
 		EvalResult := Perl.RunCode('2 + 2');
-		TestIs(Perl.ScalarToInt(EvalResult), 4, 'very basic eval ok');
+		TestIs(Perl.ScalarToInteger(EvalResult), 4, 'very basic eval ok');
 
 		EvalResult := Perl.RunCode('die "bailing out\n"', false);
 		TestIs(Perl.ScalarDefined(EvalResult), false, 'exception returning undef ok');
@@ -99,8 +99,8 @@ begin
 
 	try
 		Perl.RunCode('sub test_int { return shift() + 1 }');
-		SubResult := Perl.CallSub('test_int', [Perl.IntToScalar(41)]);
-		TestIs(Perl.ScalarToInt(SubResult), 42, 'integer test ok');
+		SubResult := Perl.CallSub('test_int', [Perl.IntegerToScalar(41)]);
+		TestIs(Perl.ScalarToInteger(SubResult), 42, 'integer test ok');
 
 		Perl.RunCode('sub test_float { return shift() / 2 }');
 		SubResult := Perl.CallSub('test_float', [Perl.FloatToScalar(7)]);
@@ -182,19 +182,19 @@ begin
 	Perl := TPerlHandle.Create(true);
 
 	try
-		Value1 := Perl.IntToScalar(42);
+		Value1 := Perl.IntegerToScalar(42);
 		TestIs(Perl.ScalarDefined(Value1), true, 'value before context ok');
 
 		{ context 1 begin }
 		Perl.EnterContext;
 
-		Value2 := Perl.IntToScalar(42);
+		Value2 := Perl.IntegerToScalar(42);
 		TestIs(Perl.ScalarDefined(Value2), true, 'value in context 1 ok');
 
 		{ context 2 begin }
 		Perl.EnterContext;
 
-		Value3 := Perl.IntToScalar(42);
+		Value3 := Perl.IntegerToScalar(42);
 		TestIs(Perl.ScalarDefined(Value3), true, 'value in context 2 ok');
 
 		{ context 2 end }
