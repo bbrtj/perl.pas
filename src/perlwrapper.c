@@ -12,7 +12,7 @@ void setup_flags(int destruct_level)
 }
 
 /* Simple wrapper to call a Perl subroutine with arguments */
-SV* call_perl_sub(const char *sub_name, SV **args, int arg_count)
+SV* call_perl_sub(const char *sub_name, SV **args, int arg_count, int is_method)
 {
 	dSP;
 	int count;
@@ -29,7 +29,7 @@ SV* call_perl_sub(const char *sub_name, SV **args, int arg_count)
 	}
 	PUTBACK;
 
-	count = call_pv(sub_name, G_SCALAR | G_EVAL);
+	count = is_method ? call_method(sub_name, G_SCALAR | G_EVAL) : call_pv(sub_name, G_SCALAR | G_EVAL);
 
 	SPAGAIN;
 

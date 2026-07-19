@@ -16,6 +16,7 @@ type
 		procedure BadLibTest();
 		procedure MultiplierTest();
 		procedure StringManipulatorTest();
+		procedure StringUtilTest();
 	end;
 
 implementation
@@ -26,6 +27,7 @@ begin
 	Scenario(@self.BadLibTest, 'Incorrect library usage tests');
 	Scenario(@self.MultiplierTest, 'multiplier script tests');
 	Scenario(@self.StringManipulatorTest, 'StringManipulator library tests');
+	Scenario(@self.StringUtilTest, 'StringUtil library tests');
 end;
 
 procedure TLibSuite.BadLibTest();
@@ -87,6 +89,27 @@ begin
 		Perl.CallSub('StringManipulator::start', []);
 		SubResult := Perl.CallSub('StringManipulator::append', [Perl.StringToScalar('??')]);
 		TestIs(Perl.ScalarToString(SubResult), '??', 'restart ok');
+	finally
+		Perl.Free;
+	end;
+end;
+
+procedure TLibSuite.StringUtilTest();
+var
+	Perl: TPerlHandle;
+	Obj: TPerlSv;
+	SubResult: TPerlSV;
+begin
+	Perl := TPerlHandle.Create(['-It/lib', '-MStringManipulator::StringUtil', '-e0'], true);
+
+	try
+		Obj := Perl.CallMethod(Perl.StringToScalar('StringManipulator::StringUtil'), 'new', []);
+		Perl.CallMethod(Obj, 'append', [Perl.StringToScalar('123456abc789def0')]);
+		Perl.CallMethod(Obj, 'replace', [Perl.StringToScalar('\d'), Perl.StringToScalar('N')]);
+		Perl.CallMethod(Obj, 'append', [Perl.StringToScalar('?')]);
+
+		SubResult := Perl.CallMethod(Obj, 'get', []);
+		TestIs(Perl.ScalarToString(SubResult), 'NNNNNNabcNNNdefN?', 'result ok');
 	finally
 		Perl.Free;
 	end;

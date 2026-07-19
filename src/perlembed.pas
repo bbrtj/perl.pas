@@ -61,6 +61,7 @@ type
 	public
 		function RunCode(const Code: String; ExceptionOnError: Boolean = true): TPerlSV;
 		function CallSub(const Name: String; const Args: Array of TPerlSV; ExceptionOnError: Boolean = true): TPerlSV;
+		function CallMethod(Obj: TPerlSV; const Name: String; const Args: Array of TPerlSV; ExceptionOnError: Boolean = true): TPerlSV;
 		function EvalError(): TPerlSV;
 		function EvalSuccess(): Boolean;
 	end;
@@ -81,7 +82,7 @@ function Perl_newSVpv(Pv: TPerlPV; Len: TPerlStrLen): TPerlSV; cdecl; external '
 { Our wrapper functions }
 procedure xs_init(Interp: TPerlInterpreter); cdecl; external;
 procedure setup_flags(DestructLevel: cint); cdecl; external;
-function call_perl_sub(SubName: PChar; Args: PPerlSV; ArgCount: cint): TPerlSV; cdecl; external;
+function call_perl_sub(SubName: PChar; Args: PPerlSV; ArgCount: cint; IsMethod: cint): TPerlSV; cdecl; external;
 procedure do_PERL_SYS_INIT3(Argc: cint; Argv: PPChar; Env: PPChar); cdecl; external;
 procedure do_PERL_SYS_TERM(); cdecl; external;
 function do_SvPV(Sv: TPerlSV; Len: PPerlStrLen): TPerlPV; cdecl; external;
@@ -263,13 +264,35 @@ end;
 
 function TPerlHandle.CallSub(const Name: String; const Args: Array of TPerlSV; ExceptionOnError: Boolean = true): TPerlSV;
 begin
-	result := call_perl_sub(PChar(Name), @Args, length(Args));
+	result := call_perl_sub(PChar(Name), @Args, length(Args), 0);
 	self.AdoptScalar(result);
 
 	if ExceptionOnError and not self.EvalSuccess then
 		raise EPerlCallFailed.Create(
 			Format(
 				'calling %s failed: %s',
+				[Name, self.ScalarToString(self.EvalError)]
+			)
+		);
+end;
+
+function TPerlHandle.CallMethod(Obj: TPerlSV; const Name: String; const Args: Array of TPerlSV; ExceptionOnError: Boolean = true): TPerlSV;
+var
+	FullArgs: Array of TPerlSv;
+	I: Integer;
+begin
+	SetLength(FullArgs, length(Args) + 1);
+	FullArgs[0] := Obj;
+	for I := low(Args) to high(Args) do
+		FullArgs[I + 1] := Args[I];
+
+	result := call_perl_sub(PChar(Name), @FullArgs[0], length(FullArgs), 1);
+	self.AdoptScalar(result);
+
+	if ExceptionOnError and not self.EvalSuccess then
+		raise EPerlCallFailed.Create(
+			Format(
+				'calling method %s failed: %s',
 				[Name, self.ScalarToString(self.EvalError)]
 			)
 		);
