@@ -27,6 +27,7 @@ type
 
 	EPerl = class(Exception);
 	EPerlContext = class(Exception);
+	EPerlEvalFailed = class(EPerl);
 	EPerlCallFailed = class(EPerl);
 
 	TPerlHandle = class
@@ -57,9 +58,8 @@ type
 		procedure EnterContext();
 		procedure LeaveContext();
 	public
-		function RunCode(const Code: String): TPerlSV;
-		function CallSub(const Name: String; const Args: Array of TPerlSV): TPerlSV;
-		function EvalSub(const Name: String; const Args: Array of TPerlSV): TPerlSV;
+		function RunCode(const Code: String; ExceptionOnError: Boolean = true): TPerlSV;
+		function CallSub(const Name: String; const Args: Array of TPerlSV; ExceptionOnError: Boolean = true): TPerlSV;
 		function EvalError(): TPerlSV;
 		function EvalSuccess(): Boolean;
 	end;
@@ -238,27 +238,31 @@ begin
 	raise EPerlContext.Create('Attempt to leave Perl context without entering it first');
 end;
 
-function TPerlHandle.RunCode(const Code: String): TPerlSV;
+function TPerlHandle.RunCode(const Code: String; ExceptionOnError: Boolean = true): TPerlSV;
 begin
 	result := Perl_eval_pv(TPerlPV(Code), 0);
+
+	if ExceptionOnError and not self.EvalSuccess then
+		raise EPerlEvalFailed.Create(
+			Format(
+				'evaluating code failed: %s',
+				[self.ScalarToString(self.EvalError)]
+			)
+		);
 end;
 
-function TPerlHandle.CallSub(const Name: String; const Args: Array of TPerlSV): TPerlSV;
+function TPerlHandle.CallSub(const Name: String; const Args: Array of TPerlSV; ExceptionOnError: Boolean = true): TPerlSV;
 begin
-	result := self.EvalSub(Name, Args);
-	if not self.EvalSuccess then
+	result := call_perl_sub(PChar(Name), @Args, length(Args));
+	self.AdoptScalar(result);
+
+	if ExceptionOnError and not self.EvalSuccess then
 		raise EPerlCallFailed.Create(
 			Format(
 				'calling %s failed: %s',
 				[Name, self.ScalarToString(self.EvalError)]
 			)
 		);
-end;
-
-function TPerlHandle.EvalSub(const Name: String; const Args: Array of TPerlSV): TPerlSV;
-begin
-	result := call_perl_sub(PChar(Name), @Args, length(Args));
-	self.AdoptScalar(result);
 end;
 
 function TPerlHandle.EvalError(): TPerlSV;

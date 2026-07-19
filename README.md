@@ -25,6 +25,9 @@ in your Pascal code. Building process can be copied from `makefile`.
 Only unthreaded perls are supported right now. No support for multiplicity -
 only one interpreter can be instantiated at a time.
 
+Perl should be compiled without any @INC to avoid potential lib mismatches and
+make it easier to test - work out how to do that.
+
 Perl functions can only be called in scalar context.
 
 There is no way to call Pascal back from Perl - an XS layer for that needs to

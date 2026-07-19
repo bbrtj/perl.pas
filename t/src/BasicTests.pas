@@ -71,10 +71,18 @@ begin
 		EvalResult := Perl.RunCode('2 + 2');
 		TestIs(Perl.ScalarToInt(EvalResult), 4, 'very basic eval ok');
 
-		EvalResult := Perl.RunCode('die "bailing out\n"');
+		EvalResult := Perl.RunCode('die "bailing out\n"', false);
 		TestIs(Perl.ScalarDefined(EvalResult), false, 'exception returning undef ok');
 		TestIs(Perl.EvalSuccess, false, 'exception defined ok');
 		TestIs(Perl.ScalarToString(Perl.EvalError), 'bailing out' + sLineBreak, 'exception text ok');
+
+		try
+			Perl.RunCode('die "bailing out\n"');
+			TestFail('Running code with exceptions turned out did not stop execution');
+		except
+			on E: EPerlEvalFailed do
+				TestIs(E.Message, 'evaluating code failed: bailing out' + sLineBreak, 'pascal exception raised ok');
+		end;
 	finally
 		Perl.Free;
 	end;
@@ -116,7 +124,7 @@ begin
 	try
 		Perl.RunCode('sub test_exception { die "ex\n" }');
 
-		SubResult := Perl.EvalSub('test_exception', []);
+		SubResult := Perl.CallSub('test_exception', [], false);
 		TestIs(Perl.ScalarDefined(SubResult), false, 'result undefined ok');
 		TestIs(Perl.EvalSuccess, false, 'got exception ok');
 		TestIs(Perl.ScalarToString(Perl.EvalError), 'ex' + sLineBreak, 'perl exception text ok');
