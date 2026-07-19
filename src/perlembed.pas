@@ -43,7 +43,8 @@ type
 		procedure AdoptScalar(Value: TPerlSV);
 		procedure DisownScalars(Mark: Integer = 0);
 	public
-		constructor Create(Cleanup: Boolean = false); virtual;
+		constructor Create(Cleanup: Boolean = false);
+		constructor Create(Args: Array of String; Cleanup: Boolean = false);
 		destructor Destroy; override;
 	public
 		function ScalarDefined(Value: TPerlSV): Boolean;
@@ -118,10 +119,10 @@ begin
 	end;
 end;
 
-constructor TPerlHandle.Create(Cleanup: Boolean = false);
+constructor TPerlHandle.Create(Args: Array of String; Cleanup: Boolean = false);
 var
 	I: Integer;
-	Argv: Array[0..3] of PChar;
+	Argv: Array of PChar;
 begin
 	{ NOTE: need to be done early for the destructor to work properly }
 	FPerlVarsLastIndex := -1;
@@ -136,19 +137,28 @@ begin
 	perl_construct(FPerl);
 	setup_flags(IfThen(Cleanup, 1, 0));
 
+	SetLength(Argv, length(Args) + 2);
+	for I := 0 to high(Args) do
+		Argv[I + 1] := PChar(Args[I]);
+
+	{ mandatory for the interpreter to work }
 	Argv[0] := '';
-	Argv[1] := '-e';
-	Argv[2] := '0';
-	Argv[3] := nil;
+	Argv[high(Argv)] := nil;
 
 	{ Parse and initialize Perl }
-	if perl_parse(FPerl, @xs_init, high(Argv), @Argv, nil) <> 0 then
+	if perl_parse(FPerl, @xs_init, high(Argv), @Argv[0], nil) <> 0 then
 		raise EPerl.Create('Failed to initialize Perl interpreter');
 
 	if perl_run(FPerl) <> 0 then
 		raise EPerl.Create('Failed to run Perl interpreter');
 
 	Inc(FInterpreterCount);
+end;
+
+constructor TPerlHandle.Create(Cleanup: Boolean = false);
+begin
+	{ most basic way of creating the interpreter - eval emptiness }
+	self.Create(['-e', '0'], Cleanup);
 end;
 
 destructor TPerlHandle.Destroy();

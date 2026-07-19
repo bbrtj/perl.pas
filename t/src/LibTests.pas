@@ -14,6 +14,7 @@ type
 		constructor Create(); override;
 
 		procedure BadLibTest();
+		procedure MultiplierTest();
 		procedure StringManipulatorTest();
 	end;
 
@@ -23,7 +24,8 @@ constructor TLibSuite.Create();
 begin
 	inherited;
 	Scenario(@self.BadLibTest, 'Incorrect library usage tests');
-	Scenario(@self.StringManipulatorTest, 'StringUtil example tests');
+	Scenario(@self.MultiplierTest, 'multiplier script tests');
+	Scenario(@self.StringManipulatorTest, 'StringManipulator library tests');
 end;
 
 procedure TLibSuite.BadLibTest();
@@ -45,15 +47,32 @@ begin
 	end;
 end;
 
+procedure TLibSuite.MultiplierTest();
+const
+	CSmallPrecision = 1E-8;
+var
+	Perl: TPerlHandle;
+	SubResult: TPerlSV;
+begin
+	Perl := TPerlHandle.Create(['t/lib/multiplier.pl'], true);
+
+	try
+		SubResult := Perl.CallSub('multiply', [Perl.FloatToScalar(2.6), Perl.FloatToScalar(4)]);
+		TestWithin(Perl.ScalarToFloat(SubResult), 10.4, CSmallPrecision, 'multiply ok');
+	finally
+		Perl.Free;
+	end;
+end;
+
 procedure TLibSuite.StringManipulatorTest();
 var
 	Perl: TPerlHandle;
 	SubResult: TPerlSV;
 begin
-	Perl := TPerlHandle.Create(true);
+	Perl := TPerlHandle.Create(['-It/lib', '-e0'], true);
 
 	try
-		Perl.RunCode('use lib ''t/lib''; use StringManipulator;');
+		Perl.RunCode('use StringManipulator;');
 
 		Perl.CallSub('StringManipulator::start', []);
 		SubResult := Perl.CallSub('StringManipulator::append', [Perl.StringToScalar('123456abc789def0')]);
