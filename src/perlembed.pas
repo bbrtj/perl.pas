@@ -40,12 +40,15 @@ type
 		FPerlVarsLastIndex: Integer;
 		FPerlVarsMarks: Array[0 .. CMaxPerlContextDepth - 1] of Integer;
 	strict private
-		procedure AdoptScalar(Value: TPerlSV);
 		procedure DisownScalars(Mark: Integer = 0);
 	public
 		constructor Create(Cleanup: Boolean = false);
 		constructor Create(Args: Array of String; Cleanup: Boolean = false);
 		destructor Destroy; override;
+	public
+		procedure AdoptScalar(Value: TPerlSV);
+		procedure SnatchScalar();
+		procedure DisownScalar(Value: TPerlSV);
 	public
 		function ScalarDefined(Value: TPerlSV): Boolean;
 		function ScalarTrue(Value: TPerlSV): Boolean;
@@ -64,6 +67,23 @@ type
 		function CallMethod(Obj: TPerlSV; const Name: String; const Args: Array of TPerlSV; ExceptionOnError: Boolean = true): TPerlSV;
 		function EvalError(): TPerlSV;
 		function EvalSuccess(): Boolean;
+	end;
+
+	TPerlObject = class abstract
+	protected
+		FInstance: TPerlSV;
+		FManageSV: Boolean;
+	protected
+		function GetPerl(): TPerlHandle; virtual; abstract;
+	protected
+		property Perl: TPerlHandle read GetPerl;
+		property Instance: TPerlSV read FInstance;
+	public
+		constructor Create(Args: Array of TPerlSV; ManageSV: Boolean = false);
+		destructor Destroy; override;
+	public
+		class function ConstructorName(): String; virtual;
+		class function PerlClassName(): String; virtual; abstract;
 	end;
 
 { Perl C API functions }
@@ -97,25 +117,10 @@ implementation
 
 {$link perlwrapper}
 
-procedure TPerlHandle.AdoptScalar(Value: TPerlSV);
-const
-	CStartCapacity = 10;
-	CCapacityGrowthRate = 1.5;
-begin
-	Inc(FPerlVarsLastIndex);
-	if FPerlVarsLastIndex >= FPerlVarsCapacity then	begin
-		FPerlVarsCapacity := Max(CStartCapacity, Floor(FPerlVarsCapacity * CCapacityGrowthRate));
-		SetLength(FPerlVars, FPerlVarsCapacity);
-	end;
-
-	{ NOTE: scalar should already have an increased refcount }
-	FPerlVars[FPerlVarsLastIndex] := Value;
-end;
-
 procedure TPerlHandle.DisownScalars(Mark: Integer = 0);
 begin
 	while FPerlVarsLastIndex >= Mark do begin
-		do_SVREFCNT_dec(FPerlVars[FPerlVarsLastIndex]);
+		self.DisownScalar(FPerlVars[FPerlVarsLastIndex]);
 		Dec(FPerlVarsLastIndex);
 	end;
 end;
@@ -172,6 +177,34 @@ begin
 
 		Dec(FInterpreterCount);
 	end;
+end;
+
+procedure TPerlHandle.AdoptScalar(Value: TPerlSV);
+const
+	CStartCapacity = 10;
+	CCapacityGrowthRate = 1.5;
+begin
+	Inc(FPerlVarsLastIndex);
+	if FPerlVarsLastIndex >= FPerlVarsCapacity then	begin
+		FPerlVarsCapacity := Max(CStartCapacity, Floor(FPerlVarsCapacity * CCapacityGrowthRate));
+		SetLength(FPerlVars, FPerlVarsCapacity);
+	end;
+
+	{ NOTE: scalar should already have an increased refcount }
+	FPerlVars[FPerlVarsLastIndex] := Value;
+end;
+
+procedure TPerlHandle.SnatchScalar();
+begin
+	if FPerlVarsLastIndex < 0 then
+		raise EPerl.Create('Cannot snatch scalar - no scalars adopted');
+
+	Dec(FPerlVarsLastIndex);
+end;
+
+procedure TPerlHandle.DisownScalar(Value: TPerlSV);
+begin
+	do_SVREFCNT_dec(Value);
 end;
 
 function TPerlHandle.ScalarDefined(Value: TPerlSV): Boolean;
@@ -306,6 +339,30 @@ end;
 function TPerlHandle.EvalSuccess(): Boolean;
 begin
 	result := not self.ScalarTrue(self.EvalError);
+end;
+
+constructor TPerlObject.Create(Args: Array of TPerlSV; ManageSV: Boolean = false);
+begin
+	FManageSV := ManageSV;
+	FInstance := self.Perl.CallMethod(
+		self.Perl.StringToScalar(self.PerlClassName),
+		self.ConstructorName,
+		Args
+	);
+
+	if FManageSV then
+		self.Perl.SnatchScalar;
+end;
+
+destructor TPerlObject.Destroy();
+begin
+	if (FInstance <> nil) and FManageSV then
+		self.Perl.DisownScalar(FInstance);
+end;
+
+class function TPerlObject.ConstructorName(): String;
+begin
+	result := 'new';
 end;
 
 { implementation end }

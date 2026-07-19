@@ -2,7 +2,7 @@ program Leaks;
 
 {$mode objfpc}{$H+}{$J-}
 
-uses TAP, PerlEmbed;
+uses TAP, PerlEmbed, ObjectWrapper;
 
 { This sets up non-cleaning perl interpreter, which allows valgrind leak check
   and other software to see leaked scalars. It also serves as a nice test for a
@@ -11,25 +11,20 @@ uses TAP, PerlEmbed;
 { TODO: make checking for leaked memory automatic (avoid needing valgrind) }
 
 var
-	Perl: TPerlHandle;
-	SubResult: TPerlSV;
+	Obj: TStringUtil;
 begin
-	Perl := TPerlHandle.Create;
+	ObjectWrapperPerl := TPerlHandle.Create(['-It/lib', '-MStringManipulator::StringUtil', '-e0']);
 
 	try
-		Perl.RunCode('sub test_substr { return $_[0] =~ s{\Q$_[1]\E}{$_[2]}rg; }');
-		SubResult := Perl.CallSub(
-			'test_substr',
-			[
-				Perl.StringToScalar('footender fooman'),
-				Perl.StringToScalar('foo'),
-				Perl.StringToScalar('bar')
-			]
-		);
+		Obj := TStringUtil.Create;
+		Obj.AppendString('123456abc789def0');
+		Obj.ReplaceString('\d', 'N');
+		Obj.AppendString('?');
 
-		TestIs(Perl.ScalarToString(SubResult), 'bartender barman', 'leak test return value ok');
+		TestIs(Obj.GetString, 'NNNNNNabcNNNdefN?', 'result ok');
 	finally
-		Perl.Free;
+		Obj.Free;
+		ObjectWrapperPerl.Free;
 	end;
 
 	DoneTesting;
