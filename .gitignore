@@ -1,4 +1,5 @@
 /build
 *.so
 /t/tests.t
+/t/leaks.t
 
