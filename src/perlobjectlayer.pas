@@ -8,6 +8,11 @@ uses
 	Ctypes, SysUtils, Generics.Collections, PerlEmbed;
 
 type
+	TDynaLoaderPerl = class(TPerlHandle)
+	protected
+		function GetXSInit(): TXSInit; override;
+	end;
+
 	TPascalObject = class abstract
 	protected
 		function GetPerl(): TPerlHandle; virtual; abstract;
@@ -55,6 +60,9 @@ var
 	PascalObjectRegistry: TPascalObjectRegistry;
 	LastPascalError: String;
 
+{ DynaLoader boot procedure (needs DynaLoader) }
+procedure boot_DynaLoader(Cv: TPerlCV); cdecl; external;
+
 { C callbacks called from XS layer }
 function pascal_object_new(AClassName: PChar; Args: PPerlSV; ArgCount: cint): Pointer; cdecl; public;
 procedure pascal_object_destroy(Handle: Pointer); cdecl; public;
@@ -62,6 +70,20 @@ function pascal_object_call_method(Handle: Pointer; AMethodName: PChar; Args: PP
 function pascal_last_error(): PChar; cdecl; public;
 
 implementation
+
+{ use alternative (non-empty) xs_init to include DynaLoader }
+procedure MyXSInit(); cdecl;
+var
+	ThisFile: String;
+begin
+	ThisFile := {$I %FILE%};
+	Perl_newXS('DynaLoader::boot_DynaLoader', @boot_DynaLoader, PChar(ThisFile));
+end;
+
+function TDynaLoaderPerl.GetXSInit(): TXSInit;
+begin
+	result := @MyXSInit;
+end;
 
 constructor TPascalObject.CreateFromPerl(Args: Array of TPerlSV);
 begin

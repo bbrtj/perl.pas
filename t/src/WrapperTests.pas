@@ -8,7 +8,7 @@ unit WrapperTests;
 
 interface
 
-uses TAPSuite, TAP, PerlEmbed, ObjectWrappers;
+uses TAPSuite, TAP, PerlEmbed, PerlObjectLayer, ObjectWrappers;
 
 type
 	TWrapperSuite = class(TTAPSuite)

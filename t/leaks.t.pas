@@ -2,7 +2,7 @@ program Leaks;
 
 {$mode objfpc}{$H+}{$J-}
 
-uses TAP, PerlEmbed, ObjectWrappers;
+uses TAP, PerlEmbed, PerlObjectLayer, ObjectWrappers;
 
 { This sets up non-cleaning perl interpreter, which allows valgrind leak check
   and other software to see leaked scalars. It also serves as a nice test for a

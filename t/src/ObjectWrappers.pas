@@ -7,11 +7,6 @@ interface
 uses SysUtils, PerlEmbed, PerlObjectLayer;
 
 type
-	TDynaLoaderPerl = class(TPerlHandle)
-	protected
-		function GetXSInit(): TXSInit; override;
-	end;
-
 	TPerlCalculator = class(TPerlObject)
 	protected
 		function GetPerl(): TPerlHandle; override;
@@ -42,27 +37,11 @@ type
 		function GetValue(): Double;
 	end;
 
-procedure boot_DynaLoader(Cv: TPerlCV); cdecl; external;
-
 var
 	{ global perl handle to avoid keeping a copy in every object }
 	ObjectWrappersPerl: TPerlHandle;
 
 implementation
-
-{ use alternative (non-empty) xs_init to include DynaLoader }
-procedure MyXSInit(); cdecl;
-var
-	ThisFile: String;
-begin
-	ThisFile := {$I %FILE%};
-	Perl_newXS('DynaLoader::boot_DynaLoader', @boot_DynaLoader, PChar(ThisFile));
-end;
-
-function TDynaLoaderPerl.GetXSInit(): TXSInit;
-begin
-	result := @MyXSInit;
-end;
 
 function TPerlCalculator.GetPerl(): TPerlHandle;
 begin
