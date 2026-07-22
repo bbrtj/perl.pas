@@ -2,6 +2,7 @@ use strict;
 use warnings;
 
 use TCalculator;
+use Calculator;
 
 sub run_calculation
 {
@@ -21,5 +22,13 @@ sub run_exception
 
 	# this method is registered, but no such method declared in pascal
 	$calc->UNKNOWN;
+}
+
+sub get_perl_calculator
+{
+	my $calc = Calculator->new;
+	$calc->subtract(-20);
+
+	return $calc;
 }
 

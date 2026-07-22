@@ -15,6 +15,7 @@ type
 		constructor Create(); override;
 
 		procedure PerlWrapperTest();
+		procedure PerlWrapperFromPerlTest();
 		procedure PascalWrapperTest();
 		procedure PascalWrapperBadMethodTest();
 	end;
@@ -25,13 +26,15 @@ constructor TWrapperSuite.Create();
 begin
 	inherited;
 	Scenario(@self.PerlWrapperTest, 'Wrapped Perl object tests');
+	Scenario(@self.PerlWrapperFromPerlTest, 'Wrapped Perl object obtained from Perl tests');
 	Scenario(@self.PascalWrapperTest, 'Wrapped Pascal object tests');
 	Scenario(@self.PascalWrapperBadMethodTest, 'Wrapped Pascal bad method call tests');
 end;
 
-procedure TWrapperSuite.PerlWrapperTest();
 const
 	CSmallPrecision = 1E-8;
+
+procedure TWrapperSuite.PerlWrapperTest();
 var
 	Obj: TPerlCalculator;
 begin
@@ -51,9 +54,23 @@ begin
 	end;
 end;
 
+procedure TWrapperSuite.PerlWrapperFromPerlTest();
+var
+	Obj: TPerlCalculator;
+begin
+	ObjectWrappersPerl := TDynaLoaderPerl.Create(['-Isite/blib/lib', '-Isite/blib/arch', '-It/lib', 't/lib/test_calculator.pl'], true);
+
+	try
+		Obj := TPerlCalculator.CreateFromSV(ObjectWrappersPerl.CallSub('get_perl_calculator', []));
+
+		TestWithin(Obj.GetValue, 20, CSmallPrecision, 'result ok');
+	finally
+		Obj.Free;
+		ObjectWrappersPerl.Free;
+	end;
+end;
+
 procedure TWrapperSuite.PascalWrapperTest();
-const
-	CSmallPrecision = 1E-8;
 var
 	TestResult: TPerlSV;
 begin

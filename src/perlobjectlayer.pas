@@ -35,6 +35,7 @@ type
 		property Instance: TPerlSV read FInstance;
 	public
 		constructor Create(Args: Array of TPerlSV; ManageSV: Boolean = false);
+		constructor CreateFromSV(AInstance: TPerlSV);
 		destructor Destroy; override;
 	public
 		class function ConstructorName(): String; virtual;
@@ -132,6 +133,12 @@ begin
 
 	if FManageSV then
 		self.Perl.SnatchScalar;
+end;
+
+constructor TPerlObject.CreateFromSV(AInstance: TPerlSV);
+begin
+	FManageSV := false;
+	FInstance := AInstance;
 end;
 
 destructor TPerlObject.Destroy();
