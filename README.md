@@ -28,14 +28,14 @@ only one interpreter can be instantiated at a time.
 Perl should be compiled without any `@INC` to avoid potential lib mismatches and
 make it easier to test - work out how to do that.
 
+To make XS layer work, DynaLoader must be available for the perl interpreter to
+import during runtime.
+
 Perl should be sandboxed as much as possible - for example, it should not be
 possible to change program's name with `$0`, or cause the termination of the
 program with `exit`.
 
 Perl functions can only be called in scalar context.
-
-There is no way to call Pascal back from Perl - an XS layer for that needs to
-be created, with XS code generation.
 
 ## Author
 

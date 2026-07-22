@@ -17,6 +17,7 @@ type
 
 	TPerlSV = Pointer;
 	PPerlSV = ^TPerlSV;
+	TPerlCV = Pointer;
 
 	TPerlIV = clong;
 	TPerlNV = cdouble;
@@ -24,6 +25,8 @@ type
 
 	TPerlStrLen = csize_t;
 	PPerlStrLen = ^TPerlStrLen;
+
+	TXSInit = procedure(); cdecl;
 
 	EPerl = class(Exception);
 	EPerlContext = class(Exception);
@@ -41,6 +44,8 @@ type
 		FPerlVarsMarks: Array[0 .. CMaxPerlContextDepth - 1] of Integer;
 	strict private
 		procedure DisownScalars(Mark: Integer = 0);
+	protected
+		function GetXSInit(): TXSInit; virtual;
 	public
 		constructor Create(Cleanup: Boolean = false);
 		constructor Create(Args: Array of String; Cleanup: Boolean = false);
@@ -69,23 +74,6 @@ type
 		function EvalSuccess(): Boolean;
 	end;
 
-	TPerlObject = class abstract
-	protected
-		FInstance: TPerlSV;
-		FManageSV: Boolean;
-	protected
-		function GetPerl(): TPerlHandle; virtual; abstract;
-	protected
-		property Perl: TPerlHandle read GetPerl;
-		property Instance: TPerlSV read FInstance;
-	public
-		constructor Create(Args: Array of TPerlSV; ManageSV: Boolean = false);
-		destructor Destroy; override;
-	public
-		class function ConstructorName(): String; virtual;
-		class function PerlClassName(): String; virtual; abstract;
-	end;
-
 { Perl C API functions }
 function perl_alloc(): TPerlInterpreter; cdecl; external 'perl';
 procedure perl_construct(Interp: TPerlInterpreter); cdecl; external 'perl';
@@ -98,9 +86,9 @@ function Perl_eval_pv(Code: PChar; CroakOnError: cint): TPerlSV; cdecl; external
 function Perl_newSVnv(Nv: TPerlNV): TPerlSV; cdecl; external 'perl';
 function Perl_newSViv(Iv: TPerlIV): TPerlSV; cdecl; external 'perl';
 function Perl_newSVpv(Pv: TPerlPV; Len: TPerlStrLen): TPerlSV; cdecl; external 'perl';
+function Perl_newXS(Name: PChar; Subaddr: TPerlCV; Filename: PChar): TPerlCV; cdecl; external 'perl';
 
 { Our wrapper functions }
-procedure xs_init(Interp: TPerlInterpreter); cdecl; external;
 procedure setup_flags(DestructLevel: cint); cdecl; external;
 function call_perl_sub(SubName: PChar; Args: PPerlSV; ArgCount: cint; IsMethod: cint): TPerlSV; cdecl; external;
 procedure do_PERL_SYS_INIT3(Argc: cint; Argv: PPChar; Env: PPChar); cdecl; external;
@@ -123,6 +111,11 @@ begin
 		self.DisownScalar(FPerlVars[FPerlVarsLastIndex]);
 		Dec(FPerlVarsLastIndex);
 	end;
+end;
+
+function TPerlHandle.GetXSInit(): TXSInit;
+begin
+	result := nil;
 end;
 
 constructor TPerlHandle.Create(Args: Array of String; Cleanup: Boolean = false);
@@ -152,7 +145,7 @@ begin
 	Argv[high(Argv)] := nil;
 
 	{ Parse and initialize Perl }
-	if perl_parse(FPerl, @xs_init, high(Argv), @Argv[0], nil) <> 0 then
+	if perl_parse(FPerl, self.GetXSInit, high(Argv), @Argv[0], nil) <> 0 then
 		raise EPerl.Create('Failed to initialize Perl interpreter');
 
 	if perl_run(FPerl) <> 0 then
@@ -339,30 +332,6 @@ end;
 function TPerlHandle.EvalSuccess(): Boolean;
 begin
 	result := not self.ScalarTrue(self.EvalError);
-end;
-
-constructor TPerlObject.Create(Args: Array of TPerlSV; ManageSV: Boolean = false);
-begin
-	FManageSV := ManageSV;
-	FInstance := self.Perl.CallMethod(
-		self.Perl.StringToScalar(self.PerlClassName),
-		self.ConstructorName,
-		Args
-	);
-
-	if FManageSV then
-		self.Perl.SnatchScalar;
-end;
-
-destructor TPerlObject.Destroy();
-begin
-	if (FInstance <> nil) and FManageSV then
-		self.Perl.DisownScalar(FInstance);
-end;
-
-class function TPerlObject.ConstructorName(): String;
-begin
-	result := 'new';
 end;
 
 { implementation end }

@@ -6,6 +6,7 @@ FPC_FLAGS := -FEbuild -FUbuild -Flbuild -Fusrc
 PERL_CFLAGS := $(shell $(PERL) -MExtUtils::Embed -e ccopts)
 PERL_LDFLAGS := $(shell $(PERL) -MExtUtils::Embed -e ldopts)
 PERL_LIBDIR := $(shell $(PERL) -MConfig -e 'print $$Config{archlibexp}')/CORE
+SITE_DIR := site
 
 # fpc's -k passes flags straight to the system linker (ld), not through
 # gcc. ExtUtils::Embed's ldopts is written for gcc, though: it contains
@@ -20,10 +21,16 @@ PERL_LIBDIR := $(shell $(PERL) -MConfig -e 'print $$Config{archlibexp}')/CORE
 PERL_LDFLAGS_CLEAN := $(shell echo '$(PERL_LDFLAGS)' | sed -e 's/-Wl,/ /g' -e 's/,/ /g')
 PERL_LDFLAGS_FPC := $(addprefix -k,$(filter -l% -L% -E --export-dynamic,$(PERL_LDFLAGS_CLEAN)))
 
+all: tests
+
+xs: site/PascalObject.xs
+	cd $(SITE_DIR) && $(PERL) Makefile.PL
+	cd $(SITE_DIR) && make
+
 build/perlwrapper.o: src/perlwrapper.c prepare
 	$(CC) -O2 -c -fPIC $(PERL_CFLAGS) src/perlwrapper.c -o build/perlwrapper.o
 
-tests: t/tests.t.pas t/leaks.t.pas src/perlembed.pas build/perlwrapper.o prepare
+tests: t/tests.t.pas t/leaks.t.pas src/perlembed.pas build/perlwrapper.o xs prepare
 	$(FPC) $(FPC_FLAGS) -g -Fut/src -Fupascal-tap/src $(PERL_LDFLAGS_FPC) t/tests.t.pas -ot/tests.t
 	$(FPC) $(FPC_FLAGS) -g -Fut/src -Fupascal-tap/src $(PERL_LDFLAGS_FPC) t/leaks.t.pas -ot/leaks.t
 	cp -n $(PERL_LIBDIR)/libperl.so t/
@@ -33,4 +40,5 @@ prepare:
 
 clean:
 	rm -Rf build t/tests.t t/leaks.t t/libperl.so
+	cd $(SITE_DIR) && [ -f Makefile ] && $(MAKE) clean || true
 

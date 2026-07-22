@@ -1,10 +1,6 @@
 #include <EXTERN.h>
 #include <perl.h>
 
-void xs_init(PerlInterpreter *my_perl)
-{
-}
-
 void setup_flags(int destruct_level)
 {
 	PL_exit_flags |= PERL_EXIT_DESTRUCT_END;

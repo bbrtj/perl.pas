@@ -1,0 +1,9 @@
+/*.c
+/*.o
+/*.bs
+/blib
+/MYMETA.*
+/Makefile*
+!/Makefile.PL
+/pm_to_blib
+

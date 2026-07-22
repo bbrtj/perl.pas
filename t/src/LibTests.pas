@@ -7,7 +7,7 @@ unit LibTests;
 
 interface
 
-uses TAPSuite, TAP, PerlEmbed, ObjectWrapper;
+uses TAPSuite, TAP, PerlEmbed;
 
 type
 	TLibSuite = class(TTAPSuite)
@@ -17,7 +17,6 @@ type
 		procedure MultiplierTest();
 		procedure StringManipulatorTest();
 		procedure StringUtilTest();
-		procedure StringUtilWrappedTest();
 	end;
 
 implementation
@@ -29,7 +28,6 @@ begin
 	Scenario(@self.MultiplierTest, 'multiplier script tests');
 	Scenario(@self.StringManipulatorTest, 'StringManipulator library tests');
 	Scenario(@self.StringUtilTest, 'StringUtil library tests');
-	Scenario(@self.StringUtilWrappedTest, 'StringUtil wrapped library tests');
 end;
 
 procedure TLibSuite.BadLibTest();
@@ -114,25 +112,6 @@ begin
 		TestIs(Perl.ScalarToString(SubResult), 'NNNNNNabcNNNdefN?', 'result ok');
 	finally
 		Perl.Free;
-	end;
-end;
-
-procedure TLibSuite.StringUtilWrappedTest();
-var
-	Obj: TStringUtil;
-begin
-	ObjectWrapperPerl := TPerlHandle.Create(['-It/lib', '-MStringManipulator::StringUtil', '-e0'], true);
-
-	try
-		Obj := TStringUtil.Create;
-		Obj.AppendString('123456abc789def0');
-		Obj.ReplaceString('\d', 'N');
-		Obj.AppendString('?');
-
-		TestIs(Obj.GetString, 'NNNNNNabcNNNdefN?', 'result ok');
-	finally
-		Obj.Free;
-		ObjectWrapperPerl.Free;
 	end;
 end;
 
