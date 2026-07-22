@@ -17,6 +17,7 @@ type
 		procedure PerlWrapperTest();
 		procedure PerlWrapperFromPerlTest();
 		procedure PascalWrapperTest();
+		procedure PascalWrapperFromPascalTest();
 		procedure PascalWrapperBadMethodTest();
 	end;
 
@@ -28,6 +29,7 @@ begin
 	Scenario(@self.PerlWrapperTest, 'Wrapped Perl object tests');
 	Scenario(@self.PerlWrapperFromPerlTest, 'Wrapped Perl object obtained from Perl tests');
 	Scenario(@self.PascalWrapperTest, 'Wrapped Pascal object tests');
+	Scenario(@self.PascalWrapperFromPascalTest, 'Wrapped Pascal object obtained from Pascal tests');
 	Scenario(@self.PascalWrapperBadMethodTest, 'Wrapped Pascal bad method call tests');
 end;
 
@@ -82,6 +84,27 @@ begin
 		TestWithin(ObjectWrappersPerl.ScalarToFloat(TestResult), 7.75, CSmallPrecision, 'result ok');
 	finally
 		ObjectWrappersPerl.Free;
+	end;
+end;
+
+procedure TWrapperSuite.PascalWrapperFromPascalTest();
+var
+	TestResult: TPerlSV;
+	Obj: TCalculator;
+begin
+	ObjectWrappersPerl := TDynaLoaderPerl.Create(['-Isite/blib/lib', '-Isite/blib/arch', '-It/lib', 't/lib/test_calculator.pl'], true);
+
+	try
+		Obj := TCalculator.Create;
+		Obj.Subtract(-20);
+
+		TestResult := ObjectWrappersPerl.CallSub('check_pascal_object', [Obj.MakeSV]);
+		TestWithin(ObjectWrappersPerl.ScalarToFloat(TestResult), 20, CSmallPrecision, 'result ok');
+	finally
+		ObjectWrappersPerl.Free;
+
+		{ NOTE: object needs to be freed after SVs are disowned to avoid access violation }
+		Obj.Free;
 	end;
 end;
 

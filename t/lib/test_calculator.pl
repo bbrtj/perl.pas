@@ -32,3 +32,10 @@ sub get_perl_calculator
 	return $calc;
 }
 
+sub check_pascal_object
+{
+	my ($calc) = @_;
+
+	return $calc->get_value;
+}
+

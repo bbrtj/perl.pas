@@ -14,13 +14,17 @@ type
 	end;
 
 	TPascalObject = class abstract
+	private
+		FManageObject: Boolean;
 	protected
 		function GetPerl(): TPerlHandle; virtual; abstract;
 	protected
 		property Perl: TPerlHandle read GetPerl;
 	public
+		constructor Create(); virtual;
 		constructor CreateFromPerl(Args: Array of TPerlSV); virtual;
 	public
+		function MakeSV(): TPerlSV;
 		function CallMethod(const AMethodName: String; Args: Array of TPerlSV): TPerlSV; virtual; abstract;
 	end;
 
@@ -86,10 +90,24 @@ begin
 	result := @MyXSInit;
 end;
 
+constructor TPascalObject.Create();
+begin
+	FManageObject := true;
+end;
+
 constructor TPascalObject.CreateFromPerl(Args: Array of TPerlSV);
 begin
-	inherited Create;
-	{ Default constructor - override in subclasses }
+	self.Create;
+	FManageObject := false;
+end;
+
+function TPascalObject.MakeSV(): TPerlSV;
+var
+	Pkg: String;
+begin
+	Pkg := self.ClassName;
+	result := bless_pointer(PChar(Pkg), self);
+	self.Perl.AdoptScalar(result);
 end;
 
 constructor TPascalObjectRegistry.Create();
@@ -191,7 +209,8 @@ begin
 	LastPascalError := '';
 
 	try
-		TPascalObject(Handle).Free;
+		if not TPascalObject(Handle).FManageObject then
+			TPascalObject(Handle).Free;
 	except
 		on E: Exception do
 			LastPascalError := E.Message;

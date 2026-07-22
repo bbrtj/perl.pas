@@ -5,6 +5,8 @@
 /* Pascal object handle - opaque pointer to Pascal side */
 typedef void* PascalObjectHandle;
 
+EXTERN_C SV* bless_pointer(const char *class_name, void *handle);
+
 /* External functions implemented in Pascal */
 extern PascalObjectHandle pascal_object_new(const char *class_name, SV **args, int arg_count);
 extern void pascal_object_destroy(PascalObjectHandle handle);
@@ -22,9 +24,6 @@ new(class_name, ...)
 		PascalObjectHandle handle;
 		SV **args;
 		int arg_count;
-		HV *stash;
-		SV *obj;
-		SV *obj_ref;
 	CODE:
 		/* Collect arguments (skip class_name which is items[0]) */
 		arg_count = items - 1;
@@ -37,13 +36,7 @@ new(class_name, ...)
 			croak("Failed to create Pascal object of class %s: %s", class_name, pascal_last_error());
 		}
 
-		/* Create blessed reference */
-		obj = newSViv(PTR2IV(handle));
-		obj_ref = newRV_noinc(obj);
-		stash = gv_stashpv(class_name, GV_ADD);
-		sv_bless(obj_ref, stash);
-
-		RETVAL = obj_ref;
+		RETVAL = bless_pointer(class_name, handle);
 	OUTPUT:
 		RETVAL
 

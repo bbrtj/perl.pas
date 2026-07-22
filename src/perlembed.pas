@@ -91,6 +91,7 @@ function Perl_newXS(Name: PChar; Subaddr: TPerlCV; Filename: PChar): TPerlCV; cd
 { Our wrapper functions }
 procedure setup_flags(DestructLevel: cint); cdecl; external 'perlwrapper';
 function call_perl_sub(SubName: PChar; Args: PPerlSV; ArgCount: cint; IsMethod: cint): TPerlSV; cdecl; external 'perlwrapper';
+function bless_pointer(ClassName: PChar; Handle: Pointer): TPerlSV; cdecl; external 'perlwrapper';
 procedure do_PERL_SYS_INIT3(Argc: cint; Argv: PPChar; Env: PPChar); cdecl; external 'perlwrapper';
 procedure do_PERL_SYS_TERM(); cdecl; external 'perlwrapper';
 function do_SvPV(Sv: TPerlSV; Len: PPerlStrLen): TPerlPV; cdecl; external 'perlwrapper';

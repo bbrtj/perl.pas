@@ -43,6 +43,14 @@ SV* call_perl_sub(const char *sub_name, SV **args, int arg_count, int is_method)
 	return result;
 }
 
+SV* bless_pointer(const char *class_name, void *handle)
+{
+	SV *obj = newSViv(PTR2IV(handle));
+	SV *obj_ref = newRV_noinc(obj);
+	HV *stash = gv_stashpv(class_name, GV_ADD);
+	return sv_bless(obj_ref, stash);
+}
+
 /* Helpers to wrap Perl macros */
 
 void do_PERL_SYS_INIT3(int argc, char **argv, char **env)

@@ -27,7 +27,7 @@ type
 	protected
 		function GetPerl(): TPerlHandle; override;
 	public
-		constructor CreateFromPerl(Args: Array of TPerlSV); override;
+		constructor Create(); override;
 		function CallMethod(const AMethodName: String; Args: Array of TPerlSV): TPerlSV; override;
 	public
 		procedure Add(Value: Double);
@@ -110,15 +110,10 @@ begin
 	result := ObjectWrappersPerl;
 end;
 
-constructor TCalculator.CreateFromPerl(Args: Array of TPerlSV);
+constructor TCalculator.Create();
 begin
-	inherited CreateFromPerl(Args);
-
-	{ Initialize with first argument if provided, otherwise 0 }
-	if Length(Args) > 0 then
-		FValue := self.Perl.ScalarToFloat(Args[0])
-	else
-		FValue := 0.0;
+	inherited;
+	FValue := 0;
 end;
 
 function TCalculator.CallMethod(const AMethodName: String; Args: Array of TPerlSV): TPerlSV;
