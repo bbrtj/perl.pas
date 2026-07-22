@@ -27,18 +27,19 @@ xs: site/PascalObject.xs
 	cd $(SITE_DIR) && $(PERL) Makefile.PL
 	cd $(SITE_DIR) && make
 
-build/perlwrapper.o: src/perlwrapper.c prepare
-	$(CC) -O2 -c -fPIC $(PERL_CFLAGS) src/perlwrapper.c -o build/perlwrapper.o
+wrapper: src/perlwrapper.c prepare
+	$(CC) -O2 --shared -fPIC $(PERL_CFLAGS) src/perlwrapper.c -o build/libperlwrapper.so $(PERL_LDFLAGS)
 
-tests: t/tests.t.pas t/leaks.t.pas src/perlembed.pas build/perlwrapper.o xs prepare
+tests: t/tests.t.pas t/leaks.t.pas src/perlembed.pas wrapper xs prepare
 	$(FPC) $(FPC_FLAGS) -g -Fut/src -Fupascal-tap/src $(PERL_LDFLAGS_FPC) t/tests.t.pas -ot/tests.t
 	$(FPC) $(FPC_FLAGS) -g -Fut/src -Fupascal-tap/src $(PERL_LDFLAGS_FPC) t/leaks.t.pas -ot/leaks.t
 	cp -n $(PERL_LIBDIR)/libperl.so t/
+	cp build/libperlwrapper.so t/
 
 prepare:
 	mkdir -p build
 
 clean:
-	rm -Rf build t/tests.t t/leaks.t t/libperl.so
+	rm -Rf build t/tests.t t/leaks.t t/*.so
 	cd $(SITE_DIR) && [ -f Makefile ] && $(MAKE) clean || true
 

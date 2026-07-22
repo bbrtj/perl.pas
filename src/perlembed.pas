@@ -89,21 +89,19 @@ function Perl_newSVpv(Pv: TPerlPV; Len: TPerlStrLen): TPerlSV; cdecl; external '
 function Perl_newXS(Name: PChar; Subaddr: TPerlCV; Filename: PChar): TPerlCV; cdecl; external 'perl';
 
 { Our wrapper functions }
-procedure setup_flags(DestructLevel: cint); cdecl; external;
-function call_perl_sub(SubName: PChar; Args: PPerlSV; ArgCount: cint; IsMethod: cint): TPerlSV; cdecl; external;
-procedure do_PERL_SYS_INIT3(Argc: cint; Argv: PPChar; Env: PPChar); cdecl; external;
-procedure do_PERL_SYS_TERM(); cdecl; external;
-function do_SvPV(Sv: TPerlSV; Len: PPerlStrLen): TPerlPV; cdecl; external;
-function do_SvNV(Sv: TPerlSV): TPerlNV; cdecl; external;
-function do_SvIV(Sv: TPerlSV): TPerlIV; cdecl; external;
-function do_SvOK(Sv: TPerlSV): cint; cdecl; external;
-function do_SvTRUE(Sv: TPerlSV): cint; cdecl; external;
-function do_ERRSV(): TPerlSV; cdecl; external;
-procedure do_SVREFCNT_dec(Sv: TPerlSV); cdecl; external;
+procedure setup_flags(DestructLevel: cint); cdecl; external 'perlwrapper';
+function call_perl_sub(SubName: PChar; Args: PPerlSV; ArgCount: cint; IsMethod: cint): TPerlSV; cdecl; external 'perlwrapper';
+procedure do_PERL_SYS_INIT3(Argc: cint; Argv: PPChar; Env: PPChar); cdecl; external 'perlwrapper';
+procedure do_PERL_SYS_TERM(); cdecl; external 'perlwrapper';
+function do_SvPV(Sv: TPerlSV; Len: PPerlStrLen): TPerlPV; cdecl; external 'perlwrapper';
+function do_SvNV(Sv: TPerlSV): TPerlNV; cdecl; external 'perlwrapper';
+function do_SvIV(Sv: TPerlSV): TPerlIV; cdecl; external 'perlwrapper';
+function do_SvOK(Sv: TPerlSV): cint; cdecl; external 'perlwrapper';
+function do_SvTRUE(Sv: TPerlSV): cint; cdecl; external 'perlwrapper';
+function do_ERRSV(): TPerlSV; cdecl; external 'perlwrapper';
+procedure do_SVREFCNT_dec(Sv: TPerlSV); cdecl; external 'perlwrapper';
 
 implementation
-
-{$link perlwrapper}
 
 procedure TPerlHandle.DisownScalars(Mark: Integer = 0);
 begin
