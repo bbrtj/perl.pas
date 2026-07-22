@@ -20,6 +20,7 @@ type
 		function GetPerl(): TPerlHandle; virtual; abstract;
 	protected
 		property Perl: TPerlHandle read GetPerl;
+		property ManageObject: Boolean read FManageObject write FManageObject;
 	public
 		constructor Create(); virtual;
 		constructor CreateFromPerl(Args: Array of TPerlSV); virtual;
@@ -209,7 +210,7 @@ begin
 	LastPascalError := '';
 
 	try
-		if not TPascalObject(Handle).FManageObject then
+		if not TPascalObject(Handle).ManageObject then
 			TPascalObject(Handle).Free;
 	except
 		on E: Exception do
