@@ -30,7 +30,10 @@ xs: site/PascalObject.xs
 wrapper: src/perlwrapper.c prepare
 	$(CC) -O2 --shared -fPIC $(PERL_CFLAGS) src/perlwrapper.c -o build/libperlwrapper.so $(PERL_LDFLAGS)
 
-tests: t/tests.t.pas t/leaks.t.pas src/perlembed.pas wrapper xs prepare
+test_wrappers:
+	cd t && $(PERL) ../tools/wrapper_generator.pl wrappers.ini
+
+tests: t/tests.t.pas t/leaks.t.pas src/perlembed.pas wrapper xs prepare test_wrappers
 	$(FPC) $(FPC_FLAGS) -g -Fut/src -Fupascal-tap/src $(PERL_LDFLAGS_FPC) t/tests.t.pas -ot/tests.t
 	$(FPC) $(FPC_FLAGS) -g -Fut/src -Fupascal-tap/src $(PERL_LDFLAGS_FPC) t/leaks.t.pas -ot/leaks.t
 	cp -n $(PERL_LIBDIR)/libperl.so t/
@@ -40,6 +43,6 @@ prepare:
 	mkdir -p build
 
 clean:
-	rm -Rf build t/tests.t t/leaks.t t/*.so
+	rm -Rf build t/tests.t t/leaks.t t/*.so t/src/ObjectWrappers.pas t/lib/TCalculator.pm
 	cd $(SITE_DIR) && [ -f Makefile ] && $(MAKE) clean || true
 

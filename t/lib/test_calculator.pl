@@ -20,8 +20,8 @@ sub run_exception
 {
 	my $calc = TCalculator->new;
 
-	# this method is registered, but no such method declared in pascal
-	$calc->UNKNOWN;
+	# division by 0 is an exception
+	$calc->divide(0);
 }
 
 sub get_perl_calculator

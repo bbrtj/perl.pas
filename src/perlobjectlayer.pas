@@ -27,6 +27,8 @@ type
 	public
 		function MakeSV(): TPerlSV;
 		function CallMethod(const AMethodName: String; Args: Array of TPerlSV): TPerlSV; virtual; abstract;
+	public
+		class function PerlClassName(): String; virtual; abstract;
 	end;
 
 	TPerlObject = class abstract
@@ -106,7 +108,7 @@ function TPascalObject.MakeSV(): TPerlSV;
 var
 	Pkg: String;
 begin
-	Pkg := self.ClassName;
+	Pkg := self.PerlClassName;
 	result := bless_pointer(PChar(Pkg), self);
 	self.Perl.AdoptScalar(result);
 end;
@@ -127,7 +129,7 @@ end;
 
 procedure TPascalObjectRegistry.RegisterClass(ObjClass: TPascalObjectClass);
 begin
-	FClasses.AddOrSetValue(ObjClass.ClassName, ObjClass);
+	FClasses.AddOrSetValue(ObjClass.PerlClassName, ObjClass);
 end;
 
 procedure TPascalObjectRegistry.UnregisterClass(const AClassName: String);

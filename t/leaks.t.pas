@@ -13,7 +13,7 @@ uses TAP, PerlEmbed, PerlObjectLayer, ObjectWrappers;
 var
 	Obj: TPerlCalculator;
 begin
-	ObjectWrappersPerl := TDynaLoaderPerl.Create(['-Isite/blib/lib', '-Isite/blib/arch', '-It/lib', '-MCalculator', 't/lib/test_calculator.pl']);
+	WrappersPerl := TDynaLoaderPerl.Create(['-Isite/blib/lib', '-Isite/blib/arch', '-It/lib', '-MCalculator', 't/lib/test_calculator.pl']);
 
 	try
 		Obj := TPerlCalculator.Create;
@@ -21,14 +21,14 @@ begin
 
 		TestWithin(Obj.GetValue, 0.01, 1E-4, 'perl result ok');
 		TestWithin(
-			ObjectWrappersPerl.ScalarToFloat(ObjectWrappersPerl.CallSub('run_calculation', [])),
+			WrappersPerl.ScalarToFloat(WrappersPerl.CallSub('run_calculation', [])),
 			7.75,
 			1E-4,
 			'pascal result ok'
 		);
 	finally
 		Obj.Free;
-		ObjectWrappersPerl.Free;
+		WrappersPerl.Free;
 	end;
 
 	DoneTesting;

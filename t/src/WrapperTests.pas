@@ -8,7 +8,7 @@ unit WrapperTests;
 
 interface
 
-uses TAPSuite, TAP, PerlEmbed, PerlObjectLayer, ObjectWrappers;
+uses TAPSuite, TAP, PerlEmbed, PerlObjectLayer, TestObjects, ObjectWrappers;
 
 type
 	TWrapperSuite = class(TTAPSuite)
@@ -40,7 +40,7 @@ procedure TWrapperSuite.PerlWrapperTest();
 var
 	Obj: TPerlCalculator;
 begin
-	ObjectWrappersPerl := TDynaLoaderPerl.Create(['-It/lib', '-MCalculator', '-e0'], true);
+	WrappersPerl := TDynaLoaderPerl.Create(['-It/lib', '-MCalculator', '-e0'], true);
 
 	try
 		Obj := TPerlCalculator.Create;
@@ -52,7 +52,7 @@ begin
 		TestWithin(Obj.GetValue, 7.75, CSmallPrecision, 'result ok');
 	finally
 		Obj.Free;
-		ObjectWrappersPerl.Free;
+		WrappersPerl.Free;
 	end;
 end;
 
@@ -60,15 +60,15 @@ procedure TWrapperSuite.PerlWrapperFromPerlTest();
 var
 	Obj: TPerlCalculator;
 begin
-	ObjectWrappersPerl := TDynaLoaderPerl.Create(['-Isite/blib/lib', '-Isite/blib/arch', '-It/lib', 't/lib/test_calculator.pl'], true);
+	WrappersPerl := TDynaLoaderPerl.Create(['-Isite/blib/lib', '-Isite/blib/arch', '-It/lib', 't/lib/test_calculator.pl'], true);
 
 	try
-		Obj := TPerlCalculator.CreateFromSV(ObjectWrappersPerl.CallSub('get_perl_calculator', []));
+		Obj := TPerlCalculator.CreateFromSV(WrappersPerl.CallSub('get_perl_calculator', []));
 
 		TestWithin(Obj.GetValue, 20, CSmallPrecision, 'result ok');
 	finally
 		Obj.Free;
-		ObjectWrappersPerl.Free;
+		WrappersPerl.Free;
 	end;
 end;
 
@@ -76,56 +76,59 @@ procedure TWrapperSuite.PascalWrapperTest();
 var
 	TestResult: TPerlSV;
 begin
-	ObjectWrappersPerl := TDynaLoaderPerl.Create(['-Isite/blib/lib', '-Isite/blib/arch', '-It/lib', 't/lib/test_calculator.pl'], true);
+	WrappersPerl := TDynaLoaderPerl.Create(['-Isite/blib/lib', '-Isite/blib/arch', '-It/lib', 't/lib/test_calculator.pl'], true);
 
 	try
-		TestResult := ObjectWrappersPerl.CallSub('run_calculation', []);
+		TestResult := WrappersPerl.CallSub('run_calculation', []);
 
-		TestWithin(ObjectWrappersPerl.ScalarToFloat(TestResult), 7.75, CSmallPrecision, 'result ok');
+		TestWithin(WrappersPerl.ScalarToFloat(TestResult), 7.75, CSmallPrecision, 'result ok');
 	finally
-		ObjectWrappersPerl.Free;
+		WrappersPerl.Free;
 	end;
 end;
 
 procedure TWrapperSuite.PascalWrapperFromPascalTest();
 var
 	TestResult: TPerlSV;
-	Obj: TCalculator;
+	InnerObj: TCalculator;
+	Obj: TCalculatorPascal;
 begin
-	ObjectWrappersPerl := TDynaLoaderPerl.Create(['-Isite/blib/lib', '-Isite/blib/arch', '-It/lib', 't/lib/test_calculator.pl'], true);
+	WrappersPerl := TDynaLoaderPerl.Create(['-Isite/blib/lib', '-Isite/blib/arch', '-It/lib', 't/lib/test_calculator.pl'], true);
 
 	try
-		Obj := TCalculator.Create;
-		Obj.Subtract(-20);
+		InnerObj := TCalculator.Create;
+		Obj := TCalculatorPascal.Create(InnerObj);
+		InnerObj.Subtract(-20);
 
-		TestResult := ObjectWrappersPerl.CallSub('check_pascal_object', [Obj.MakeSV]);
-		TestWithin(ObjectWrappersPerl.ScalarToFloat(TestResult), 20, CSmallPrecision, 'result ok');
+		TestResult := WrappersPerl.CallSub('check_pascal_object', [Obj.MakeSV]);
+		TestWithin(WrappersPerl.ScalarToFloat(TestResult), 20, CSmallPrecision, 'result ok');
 	finally
-		ObjectWrappersPerl.Free;
+		WrappersPerl.Free;
 
 		{ NOTE: object needs to be freed after SVs are disowned to avoid access violation }
 		Obj.Free;
+		InnerObj.Free;
 	end;
 end;
 
 procedure TWrapperSuite.PascalWrapperBadMethodTest();
 begin
-	ObjectWrappersPerl := TDynaLoaderPerl.Create(['-Isite/blib/lib', '-Isite/blib/arch', '-It/lib', 't/lib/test_calculator.pl'], true);
+	WrappersPerl := TDynaLoaderPerl.Create(['-Isite/blib/lib', '-Isite/blib/arch', '-It/lib', 't/lib/test_calculator.pl'], true);
 
 	try try
-		ObjectWrappersPerl.CallSub('run_exception', []);
+		WrappersPerl.CallSub('run_exception', []);
 		TestFail('calling function which causes exception succeeded');
 	except
 		on E: EPerlCallFailed do
 			TestIs(
 				E.Message,
-				'calling run_exception failed: Failed to call pascal method UNKNOWN: No such method'
+				'calling run_exception failed: Failed to call pascal method divide: Division by zero'
 					+ ' at site/blib/lib/PascalObject.pm line 18.' + sLineBreak,
 				'exception ok'
 			);
 	end;
 	finally
-		ObjectWrappersPerl.Free;
+		WrappersPerl.Free;
 	end;
 end;
 
