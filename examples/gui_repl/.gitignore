@@ -1,0 +1,7 @@
+/backup
+/lib
+/*.lps
+/*.res
+/*.so
+/gui_repl
+

@@ -1,0 +1,76 @@
+object ReplForm: TReplForm
+  Left = 660
+  Height = 240
+  Top = 250
+  Width = 320
+  BorderIcons = [biSystemMenu]
+  BorderStyle = bsToolWindow
+  Caption = 'Perl.pas REPL'
+  ClientHeight = 240
+  ClientWidth = 320
+  DesignTimePPI = 112
+  Font.Height = 14
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  object InputMemo: TMemo
+    AnchorSideLeft.Control = Owner
+    AnchorSideTop.Control = Owner
+    Left = 8
+    Height = 89
+    Hint = 'Perl code to execute'
+    Top = 8
+    Width = 303
+    BorderSpacing.Left = 8
+    BorderSpacing.Top = 8
+    Lines.Strings = (
+      'sprintf ''%s, %s!'', ''Hello'', ''World'''
+    )
+    ParentShowHint = False
+    ShowHint = True
+    TabOrder = 0
+    WantTabs = True
+  end
+  object OutputMemo: TMemo
+    AnchorSideLeft.Control = InputMemo
+    AnchorSideTop.Control = InputMemo
+    AnchorSideTop.Side = asrBottom
+    Left = 8
+    Height = 89
+    Hint = 'Perl execution output'
+    Top = 105
+    Width = 303
+    BorderSpacing.Top = 8
+    ParentShowHint = False
+    ReadOnly = True
+    ShowHint = True
+    TabOrder = 1
+  end
+  object RunButton: TButton
+    AnchorSideLeft.Side = asrCenter
+    AnchorSideTop.Control = OutputMemo
+    AnchorSideTop.Side = asrBottom
+    AnchorSideRight.Control = OutputMemo
+    AnchorSideRight.Side = asrBottom
+    Left = 223
+    Height = 29
+    Hint = 'Execute code (ctrl-Enter)'
+    Top = 202
+    Width = 88
+    Anchors = [akTop, akRight]
+    BorderSpacing.Top = 8
+    Caption = 'Run'
+    ParentShowHint = False
+    ShowHint = True
+    TabOrder = 2
+    OnClick = RunPerlCodeExecute
+  end
+  object FormActions: TActionList
+    Left = 32
+    Top = 200
+    object RunPerlCode: TAction
+      Caption = 'RunPerlCode'
+      ShortCut = 16397
+      OnExecute = RunPerlCodeExecute
+    end
+  end
+end
