@@ -74,6 +74,12 @@ type
 		function EvalSuccess(): Boolean;
 	end;
 
+	TDynaLoaderPerl = class(TPerlHandle)
+	protected
+		function GetXSInit(): TXSInit; override;
+	end;
+
+
 { Perl C API functions }
 function perl_alloc(): TPerlInterpreter; cdecl; external 'perl';
 procedure perl_construct(Interp: TPerlInterpreter); cdecl; external 'perl';
@@ -87,6 +93,9 @@ function Perl_newSVnv(Nv: TPerlNV): TPerlSV; cdecl; external 'perl';
 function Perl_newSViv(Iv: TPerlIV): TPerlSV; cdecl; external 'perl';
 function Perl_newSVpv(Pv: TPerlPV; Len: TPerlStrLen): TPerlSV; cdecl; external 'perl';
 function Perl_newXS(Name: PChar; Subaddr: TPerlCV; Filename: PChar): TPerlCV; cdecl; external 'perl';
+
+{ DynaLoader boot procedure (needs DynaLoader) }
+procedure boot_DynaLoader(Cv: TPerlCV); cdecl; external;
 
 { Our wrapper functions }
 procedure setup_flags(DestructLevel: cint); cdecl; external 'perlwrapper';
@@ -103,6 +112,20 @@ function do_ERRSV(): TPerlSV; cdecl; external 'perlwrapper';
 procedure do_SVREFCNT_dec(Sv: TPerlSV); cdecl; external 'perlwrapper';
 
 implementation
+
+{ use alternative (non-empty) xs_init to include DynaLoader }
+procedure MyXSInit(); cdecl;
+var
+	ThisFile: String;
+begin
+	ThisFile := {$I %FILE%};
+	Perl_newXS('DynaLoader::boot_DynaLoader', @boot_DynaLoader, PChar(ThisFile));
+end;
+
+function TDynaLoaderPerl.GetXSInit(): TXSInit;
+begin
+	result := @MyXSInit;
+end;
 
 procedure TPerlHandle.DisownScalars(Mark: Integer = 0);
 begin
